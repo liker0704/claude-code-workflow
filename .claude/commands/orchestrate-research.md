@@ -8,25 +8,14 @@ You are in **ORCHESTRATOR MODE - RESEARCH PHASE**.
 
 ## Your Role
 
-You are a **coordinator**. In this phase:
-- **DO**: Spawn research agents (parallel or sequential)
-- **DO**: Collect their summaries (NOT read their files)
-- **DO**: Spawn synthesizer to create summary
-- **DON'T**: Read code yourself (agents do this)
-- **DON'T**: Read agent report files (use their return summaries)
-
-You orchestrate. Agents research.
+You are a **coordinator**:
+- **DO**: Spawn research agents, collect summaries, spawn synthesizer
+- **DON'T**: Read code yourself, read agent report files (use return summaries)
 
 ## Entry/Exit Criteria
 
-**Entry (required to start):**
-- `tmp/.orchestrate/{task-slug}/` directory exists
-- `task.md` has `Status: initialized`
-
-**Exit (on completion):**
-- `task.md` updated to `Status: research-complete`
-- `research/_summary.md` created
-- `[x] Research` marked in task.md phases
+**Entry:** `task.md` has `Status: initialized`
+**Exit:** `task.md` updated to `Status: research-complete`, `research/_summary.md` created
 
 ## Your Task
 
@@ -36,365 +25,193 @@ Research phase for task: **$ARGUMENTS**
 
 ```
 Check: tmp/.orchestrate/{task-slug}/ exists
-If not:
-  "Task '{task-slug}' not found.
-   Run /orchestrate {description} to create a new task."
-  EXIT
-
 Check: tmp/.orchestrate/{task-slug}/task.md exists
-If not:
-  "Task directory corrupted. Delete and recreate."
-  EXIT
 ```
 
 ## Step 2: Check Current Status
 
-Read `task.md` and check status:
-
-**If `researching`:**
-```
-Research in progress for '{task-slug}'.
-
-Options:
-1. Check agent status (resume waiting)
-2. View partial results
-3. Restart research
-4. Cancel
-
-Choose [1/2/3/4]:
-```
-
-**If `research-complete` or later:**
-```
-Research already complete for '{task-slug}'.
-
-Options:
-1. View research summary
-2. Re-run specific agent
-3. Proceed to planning: /orchestrate-plan {task-slug}
-4. Full re-research
-
-Choose [1/2/3/4]:
-```
-
-**If `initialized`:** Proceed to Step 3.
+**If `researching`:** Offer check agents/view partial/restart/cancel
+**If `research-complete` or later:** Offer view summary/re-run agent/proceed to plan/full re-research
+**If `initialized`:** Proceed to Step 3
+**Otherwise:** Error, suggest appropriate phase
 
 ## Step 3: Update Status
 
-Update `task.md`:
-```
-Status: researching
-Last-updated: {YYYY-MM-DD HH:MM:SS}
-```
+Update `task.md` to `Status: researching`
 
-## Step 4: Assess Task Complexity
-
-**BEFORE spawning agents, assess complexity to determine research depth.**
-
-Read task description and categorize:
+## Step 4: Assess Complexity
 
 ```
-COMPLEXITY ASSESSMENT:
-
-Simple (1-2 files, single feature):
-  → Standard research (4 agents)
-
-Medium (3-10 files, multiple components):
-  → Standard research + additional domain agent
-
-Complex (10+ files, architectural changes, multiple systems):
-  → Extended research (6-8 agents, multiple passes)
+Simple (1-2 files): Standard research (4 agents)
+Medium (3-10 files): Standard + domain agent
+Complex (10+ files, architectural): Extended (6-8 agents, gaps check)
 ```
 
-**Indicators of COMPLEX task:**
-- Touches multiple directories/modules
-- Involves security, authentication, payments
-- Requires database schema changes
-- Affects public APIs
-- Spans frontend + backend
-- Has "refactor", "migrate", "redesign" in description
+**Complex indicators:** multiple modules, security/auth/payments, DB schema changes, API changes, "refactor"/"migrate"/"redesign"
 
-**Show assessment to user:**
+Show assessment:
 ```
-## Task Complexity Assessment
+## Complexity Assessment
+Task: {slug}
+Indicators: [x] Multiple modules, [x] API changes, [ ] DB migration
+Complexity: {SIMPLE|MEDIUM|COMPLEX}
+Research plan: {agents to spawn}
 
-Task: {task-slug}
-
-Indicators found:
-- [x] Multiple modules affected (src/auth/, src/api/, src/db/)
-- [x] Security-related changes
-- [ ] Database migration
-- [x] API changes
-
-Complexity: COMPLEX
-
-Research plan:
-- Standard agents (4): locator, analyzer, pattern-finder, web-researcher
-- Additional agents (2): security-researcher, api-analyzer
-- Multiple passes: YES (architecture overview first)
-
-Proceed with extended research? [Yes/Modify/Simple]
+Proceed? [Yes/Modify/Simple]
 ```
 
----
+## Step 5: Spawn Research Agents
 
-## Step 5: Spawn Research Agents (Adaptive Mode)
-
-### Standard Mode (Simple/Medium tasks)
-
+### Standard Mode (Simple/Medium)
 ```
 Locator → Analyzer → [Pattern Finder || Web Researcher] → Synthesizer
          sequential              PARALLEL
 ```
 
-**~5 min total**
-
-### Extended Mode (Complex tasks)
-
+### Extended Mode (Complex)
 ```
-Phase A (Architecture Overview):
-  Locator (broad) → Architecture Overview Agent
-
-Phase B (Deep Analysis - PARALLEL):
-  [Analyzer || Pattern Finder || Web Researcher || Domain Specialist]
-
-Phase C (Gaps Check):
-  Gaps Analyzer → Additional targeted research if needed
-
-Phase D:
-  Synthesizer (with all inputs)
+Phase A: Locator → Architecture Overview
+Phase B: [Analyzer || Pattern Finder || Web Researcher || Domain Specialist] PARALLEL
+Phase C: Gaps Analyzer → Additional research if needed
+Phase D: Synthesizer
 ```
 
-**~10-15 min total** (but catches issues that would cost hours later)
+### 5.1: Locator (sequential)
 
----
-
-### Step 5.1: Locator (sequential)
 ```yaml
 Tool: Task
 Parameters:
   subagent_type: "codebase-locator"
   prompt: |
-    ## Task
-    {task description}
-
-    ## Mission
+    Task: {description}
     Find all code locations relevant to this task.
-
-    ## Output
-    Write report to: tmp/.orchestrate/{task-slug}/research/codebase-locator.md
+    Write to: tmp/.orchestrate/{task-slug}/research/codebase-locator.md
     Return structured summary.
   description: "Research: locate"
 ```
 
-**Wait** for completion, collect `{locator_summary}`.
+Wait, collect `{locator_summary}`.
 
----
+### 5.2: Analyzer (sequential, needs Locator)
 
-### Step 4.2: Analyzer (sequential, needs Locator)
 ```yaml
 Tool: Task
 Parameters:
   subagent_type: "codebase-analyzer"
   prompt: |
-    ## Task
-    {task description}
-
-    ## From Locator
-    {locator_summary}
-
-    ## Mission
-    Analyze how the located code works. Focus on files identified by Locator.
-
-    ## Output
-    Write report to: tmp/.orchestrate/{task-slug}/research/codebase-analyzer.md
+    Task: {description}
+    From Locator: {locator_summary}
+    Analyze how located code works.
+    Write to: tmp/.orchestrate/{task-slug}/research/codebase-analyzer.md
     Return structured summary.
   description: "Research: analyze"
 ```
 
-**Wait** for completion, collect `{analyzer_summary}`.
+Wait, collect `{analyzer_summary}`.
 
----
-
-### Step 4.3: Pattern Finder + Web Researcher (PARALLEL)
-
-Both agents receive Locator + Analyzer findings, run simultaneously:
+### 5.3: Pattern Finder + Web Researcher (PARALLEL)
 
 ```yaml
-# Launch BOTH in single message with multiple Task calls:
+# Launch BOTH in single message:
 
-# Agent 1: Pattern Finder
 Tool: Task
 Parameters:
   subagent_type: "codebase-pattern-finder"
   prompt: |
-    ## Task
-    {task description}
-
-    ## From Previous Research
-    Locator: {locator_summary}
-    Analyzer: {analyzer_summary}
-
-    ## Mission
-    Find existing patterns in codebase that we should follow.
-
-    ## Output
-    Write report to: tmp/.orchestrate/{task-slug}/research/codebase-pattern-finder.md
+    Task: {description}
+    From: Locator: {locator_summary}, Analyzer: {analyzer_summary}
+    Find existing patterns to follow.
+    Write to: tmp/.orchestrate/{task-slug}/research/codebase-pattern-finder.md
     Return structured summary.
   run_in_background: true
   description: "Research: patterns"
 
-# Agent 2: Web Researcher
 Tool: Task
 Parameters:
   subagent_type: "web-search-researcher"
   prompt: |
-    ## Task
-    {task description}
-
-    ## From Previous Research
-    Locator: {locator_summary}
-    Analyzer: {analyzer_summary}
-
-    ## Mission
-    Research external best practices for implementing this.
-
-    ## Output
-    Write report to: tmp/.orchestrate/{task-slug}/research/web-search-researcher.md
+    Task: {description}
+    From: Locator: {locator_summary}, Analyzer: {analyzer_summary}
+    Research external best practices.
+    Write to: tmp/.orchestrate/{task-slug}/research/web-search-researcher.md
     Return structured summary.
   run_in_background: true
   description: "Research: web"
 ```
 
-**Wait** for both to complete using TaskOutput, collect `{pattern_summary}` and `{web_summary}`.
+Wait for both via TaskOutput, collect `{pattern_summary}` and `{web_summary}`.
 
-## Step 5: Collect Summaries
+### Session Resume Tracking
 
-You already have summaries from sequential execution (each agent returned after completion).
+After spawning background agents, save to `research/_agents.json`:
+```json
+{"pattern_finder": {"task_id": "xxx", "status": "running"}, "web_researcher": {"task_id": "yyy", "status": "running"}}
+```
 
-**DO NOT read the report files.** Use agent return summaries only.
+On resume: check `_agents.json`, use TaskOutput to get results of completed agents.
 
-Show progress:
+## Step 6: Show Progress
+
 ```
 ## Research Progress
-
-✅ codebase-locator: Found 12 relevant files in src/auth/
-✅ codebase-analyzer: AuthService uses JWT, middleware pattern
-✅ codebase-pattern-finder: Found 3 similar implementations
-✅ web-search-researcher: Best practice is OAuth2 + refresh tokens
+✅ codebase-locator: {summary}
+✅ codebase-analyzer: {summary}
+✅ codebase-pattern-finder: {summary}
+✅ web-search-researcher: {summary}
 ```
 
-## Step 6: Handle Failures
+## Step 7: Handle Failures
 
-If an agent fails:
 ```
 ⚠️ Agent {name} failed.
-
-Error: {message from return}
-
-Options:
-1. Retry this agent
-2. Continue without (if non-critical)
-3. Abort research
-
-Choose [1/2/3]:
+Error: {message}
+Options: 1. Retry | 2. Continue without | 3. Abort
 ```
 
-**Lazy reading exception:** If agent fails without useful return, MAY read its partial report file.
-
-## Step 7: Gaps Check (For Complex Tasks)
-
-**For COMPLEX tasks only.** Skip for Simple/Medium.
-
-After all research agents complete, check for gaps:
+## Step 8: Gaps Check (Complex tasks only)
 
 ```yaml
 Tool: Task
 Parameters:
   subagent_type: "general-purpose"
   prompt: |
-    You are the GAPS ANALYZER — identify what the research missed.
+    GAPS ANALYZER - identify what research missed.
+    Reports: {summaries of all agents}
+    Task: {description}
 
-    ## Research Reports Available
-    - codebase-locator.md: {summary}
-    - codebase-analyzer.md: {summary}
-    - codebase-pattern-finder.md: {summary}
-    - web-search-researcher.md: {summary}
+    Identify:
+    1. Missing areas (modules, DB, config, tests not covered)
+    2. Unanswered questions
+    3. Risk areas
 
-    ## Task Description
-    {full task description}
-
-    ## Your Mission
-    Identify GAPS in the research:
-
-    1. **Missing Areas**: What parts of codebase weren't explored?
-       - Are there related modules not covered?
-       - Database schemas checked?
-       - Config files checked?
-       - Tests checked?
-
-    2. **Unanswered Questions**: What should we know but don't?
-       - How does authentication work here?
-       - What's the error handling pattern?
-       - What are the existing tests covering?
-
-    3. **Risk Areas**: What might cause problems?
-       - Breaking changes?
-       - Migration needs?
-       - External dependencies?
-
-    ## Output Format
-    ```
-    ## Gaps Analysis
-
-    ### Critical Gaps (MUST research before planning)
-    - {gap 1}: Need to check {what}
-    - {gap 2}: Need to understand {what}
-
-    ### Recommended Additional Research
-    - Agent: {type}, Focus: {specific area}
-    - Agent: {type}, Focus: {specific area}
-
-    ### Acceptable Gaps (can proceed)
-    - {minor gap}: Low risk because {reason}
-
-    ## Verdict
-    PROCEED | NEED_MORE_RESEARCH
-    ```
+    Output:
+    - Critical gaps (MUST research before planning)
+    - Recommended additional agents
+    - Acceptable gaps (low risk)
+    - Verdict: PROCEED | NEED_MORE_RESEARCH
   description: "Check research gaps"
 ```
 
-**If NEED_MORE_RESEARCH:**
-1. Show gaps to user
-2. Offer to spawn additional targeted agents
-3. Re-run gaps check after
+**If NEED_MORE_RESEARCH:** Show gaps, offer additional agents, re-run gaps check.
 
-**If PROCEED:** Continue to Synthesizer.
-
----
-
-## Step 8: Spawn Synthesizer
-
-Spawn synthesizer agent to read all reports and create summary:
+## Step 9: Spawn Synthesizer
 
 ```yaml
 Tool: Task
 Parameters:
   subagent_type: "general-purpose"
   prompt: |
-    You are the SYNTHESIZER — combines findings from multiple research agents.
+    SYNTHESIZER - combine findings from research agents.
 
-    ## Research Synthesis
-
-    Read these 4 research reports:
+    Read these reports:
     - tmp/.orchestrate/{task-slug}/research/codebase-locator.md
     - tmp/.orchestrate/{task-slug}/research/codebase-analyzer.md
     - tmp/.orchestrate/{task-slug}/research/codebase-pattern-finder.md
     - tmp/.orchestrate/{task-slug}/research/web-search-researcher.md
 
-    Create synthesis in: tmp/.orchestrate/{task-slug}/research/_summary.md
+    Create: tmp/.orchestrate/{task-slug}/research/_summary.md
 
-    Include in _summary.md:
+    Include:
     - Executive summary (2-3 sentences)
     - Key discoveries from each agent
     - 2-3 solution options with pros/cons/effort/risk
@@ -402,89 +219,55 @@ Parameters:
     - Files to modify
     - Open questions for user
 
-    ### RETURN FORMAT (for orchestrator)
-    Return this exact structure:
-
-    ```
+    Return:
     ## Agent Summary
     Type: synthesizer
     Status: SUCCESS | PARTIAL | FAILED
-    Duration: Xm
 
     ## Output
     Options found: {count}
-    Recommended: {option name} ({effort}, {risk})
+    Recommended: {option} ({effort}, {risk})
     Files affected: {count}
     Open questions: {count}
 
     ## For Dependents
-    Recommended approach: {brief description}
-    Key files to modify:
-    - {file1}: {change type}
-    - {file2}: {change type}
-    Patterns to follow: {from pattern-finder}
-
-    ## Issues
-    {conflicts between agents, gaps in research, or "None"}
-
-    [Full: tmp/.orchestrate/{task-slug}/research/_summary.md]
-    ```
+    Recommended approach: {brief}
+    Key files: [{file: change}]
+    Patterns: {from pattern-finder}
   description: "Synthesize research"
 ```
 
-## Step 8: Present to User
-
-Use synthesizer's return summary (NOT read _summary.md):
+## Step 10: Present to User
 
 ```
 ## Research Complete
 
-Task: {task-slug}
-Mode: hybrid
+Task: {slug}
 Agents: 4/4 completed
 
 ### Recommended Approach
-{from synthesizer return}
+{from synthesizer}
 
 ### Options Found
-{brief list from synthesizer return}
+{list}
 
 ### Open Questions
-{questions needing user input}
+{questions}
 
----
+Full research: research/_summary.md
 
-Full research: tmp/.orchestrate/{task-slug}/research/_summary.md
-
----
-
-Does this direction look good?
-
-- [Approve] Accept and proceed to planning
-- [Questions] I have questions about the findings
-- [Alternative] Consider a different approach
-- [Re-research] Run research again with different focus
+[Approve] Proceed to planning | [Questions] Need clarification | [Alternative] Different approach | [Re-research] Run again
 ```
 
-## Step 9: Handle Response
+## Step 11: Handle Response
 
 **On Approve:**
-1. Update `task.md`:
-   ```
-   Status: research-complete
-   Last-updated: {YYYY-MM-DD HH:MM:SS}
-   ```
-   Mark `[x] Research` in phases.
-2. Show: `Research approved. Run /orchestrate-plan {task-slug} to continue.`
+1. Update `task.md` to `Status: research-complete`, mark `[x] Research`
+2. Show: `Research approved. Run /orchestrate-plan {task-slug}`
 
-**On Questions:**
-Answer using synthesizer summary. If insufficient, MAY read _summary.md (lazy reading exception).
-
-**On Alternative:**
-Discuss alternatives, potentially re-run specific agents.
-
-**On Re-research:**
-Reset status to `researching`, re-run with adjusted focus.
+**On Questions:** Answer from synthesizer summary. If insufficient, read _summary.md (fallback)
+**On Alternative:** Discuss, potentially re-run specific agents
+**On Re-research:** Reset to `researching`, re-run
 
 ---
 
