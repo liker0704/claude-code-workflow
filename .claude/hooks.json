@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/validators/validate-orchestrate-files.py",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}
