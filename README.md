@@ -1,111 +1,112 @@
 # Claude Code Workflow
 
-Полный набор агентов, команд и хуков для многофазной оркестрации задач в Claude Code.
+A complete set of agents, commands, and hooks for multi-phase task orchestration in Claude Code.
 
-## Что внутри
+## What's Inside
 
 ```
 .claude/
-├── commands/                    # Slash-команды
-│   ├── orchestrate.md          # /orchestrate - точка входа
-│   ├── orchestrate-research.md # /orchestrate-research - фаза исследования
-│   ├── orchestrate-plan.md     # /orchestrate-plan - фаза планирования
-│   └── orchestrate-execute.md  # /orchestrate-execute - фаза выполнения
+├── commands/                    # Slash commands
+│   ├── orchestrate.md          # /orchestrate - entry point
+│   ├── orchestrate-research.md # /orchestrate-research - research phase
+│   ├── orchestrate-plan.md     # /orchestrate-plan - planning phase
+│   └── orchestrate-execute.md  # /orchestrate-execute - execution phase
 │
-├── agents/                      # Кастомные агенты
-│   ├── codebase-locator.md     # Поиск файлов по описанию
-│   ├── codebase-analyzer.md    # Анализ реализации
-│   ├── codebase-pattern-finder.md # Поиск паттернов и примеров
-│   ├── web-search-researcher.md   # Веб-исследования
-│   ├── devil-advocate.md       # Критический ревью планов
-│   ├── second-opinion.md       # Независимая валидация
-│   └── core/                   # Базовые агенты
-│       ├── implementer.md      # Написание кода
-│       ├── reviewer.md         # Код-ревью
-│       ├── tester.md           # Тестирование
-│       ├── architect.md        # Архитектура
-│       ├── debugger.md         # Отладка
-│       ├── documenter.md       # Документация
-│       ├── research.md         # Исследования
-│       ├── research-prompt.md  # Промпты для внешних LLM
-│       ├── stuck.md            # Эскалация при проблемах
-│       └── teacher.md          # Обучение и объяснения
+├── agents/                      # Custom agents
+│   ├── codebase-locator.md     # Find files by description
+│   ├── codebase-analyzer.md    # Analyze implementation
+│   ├── codebase-pattern-finder.md # Find patterns and examples
+│   ├── web-search-researcher.md   # Web research
+│   ├── devil-advocate.md       # Critical plan review
+│   ├── second-opinion.md       # Independent validation
+│   └── core/                   # Core agents
+│       ├── implementer.md      # Write code
+│       ├── reviewer.md         # Code review
+│       ├── tester.md           # Testing
+│       ├── architect.md        # Architecture
+│       ├── debugger.md         # Debugging
+│       ├── documenter.md       # Documentation
+│       ├── research.md         # Research
+│       ├── research-prompt.md  # Prompts for external LLMs
+│       ├── stuck.md            # Escalation on problems
+│       └── teacher.md          # Teaching and explanations
 │
 ├── validators/
-│   └── validate-orchestrate-files.py  # Валидация файлов оркестратора
+│   └── validate-orchestrate-files.py  # Orchestrator file validation
 │
-└── hooks.json                  # Конфигурация хуков
+└── hooks.json                  # Hooks configuration
 ```
 
-## Установка
+## Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/claude-code-workflow.git
+git clone https://github.com/liker0704/claude-code-workflow.git
 cd claude-code-workflow
 ./install.sh
 ```
 
-Скрипт:
-- Копирует только недостающие файлы (не перезаписывает существующие)
-- Создаёт бэкапы при обновлении валидаторов
-- Настраивает хуки в settings.json (или показывает инструкцию)
+The script:
+- Copies only missing files (doesn't overwrite existing ones)
+- Creates backups when updating validators
+- Configures hooks in settings.json (or shows instructions)
 
-### Удаление
+### Uninstall
 
 ```bash
 ./uninstall.sh
 ```
 
-## Использование
+## Usage
 
 ### Workflow: Research → Plan → Execute
 
 ```bash
-# 1. Инициализация задачи
-/orchestrate "Добавить аутентификацию пользователей"
+# 1. Initialize task
+/orchestrate "Add user authentication"
 
-# 2. Исследование кодовой базы (4 агента параллельно)
+# 2. Research the codebase (4 agents in parallel)
 /orchestrate-research add-user-auth
 
-# 3. Создание плана и декомпозиция на задачи
+# 3. Create plan and decompose into tasks
 /orchestrate-plan add-user-auth
 
-# 4. Выполнение плана через специализированных агентов
+# 4. Execute the plan via specialized agents
 /orchestrate-execute add-user-auth
 ```
 
-### Просто статус
+### Status only
 
 ```bash
-/orchestrate  # Показывает активные задачи
+/orchestrate  # Shows active tasks
 ```
 
-## Фазы
+## Phases
 
 ### Phase 1: Research
-- **codebase-locator** → находит релевантные файлы
-- **codebase-analyzer** → анализирует реализацию
-- **codebase-pattern-finder** → ищет похожие паттерны
-- **web-search-researcher** → исследует внешние ресурсы
-- Результат: `research/_summary.md`
+- **codebase-locator** → finds relevant files
+- **codebase-analyzer** → analyzes implementation
+- **codebase-pattern-finder** → finds similar patterns
+- **web-search-researcher** → researches external resources
+- Output: `research/_summary.md`
 
 ### Phase 2: Plan
-- **architect** → проектирует решение
-- **devil-advocate** → критикует план
-- **second-opinion** → независимая валидация
-- Результат: `plan/plan.md` + `plan/tasks.md`
+- **architect** → designs the solution
+- **devil-advocate** → critiques the plan
+- **second-opinion** → independent validation
+- Output: `plan/plan.md` + `plan/tasks.md`
 
 ### Phase 3: Execute
-- **implementer** → пишет код
-- **tester** → создаёт тесты
-- **reviewer** → проверяет качество
-- Результат: работающий код
+- **implementer** → writes code
+- **tester** → creates tests
+- **reviewer** → checks quality
+- **task-final-review** → mandatory comprehensive review before completion
+- Output: working code
 
-## Структура задачи
+## Task Structure
 
 ```
 tmp/.orchestrate/{task-slug}/
-├── task.md                  # Метаданные и статус
+├── task.md                  # Metadata and status
 ├── research/
 │   ├── codebase-locator.md
 │   ├── codebase-analyzer.md
@@ -113,20 +114,28 @@ tmp/.orchestrate/{task-slug}/
 │   ├── web-search-researcher.md
 │   └── _summary.md
 ├── plan/
-│   ├── plan.md              # Детальный план
-│   └── tasks.md             # Декомпозиция задач
+│   ├── plan.md              # Detailed plan
+│   └── tasks.md             # Task decomposition
 └── execution/
     ├── _progress.md
+    ├── _final-review.md
+    ├── _devils-advocate.md
     └── task-XX-*.md
 ```
 
-## Статусы
+## Status Flow
 
 ```
 initialized → researching → research-complete → planning → plan-complete → executing → complete
                                                                               ↓
                                                                           blocked
 ```
+
+## Key Features
+
+- **Mandatory Final Review**: Every execution includes a comprehensive final review with holistic code review and devil's advocate critique before marking complete
+- **Smart Installation**: Merges with existing `.claude/` configuration without overwriting
+- **Validation Hooks**: Automatic validation of orchestrator files on write
 
 ## License
 

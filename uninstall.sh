@@ -17,17 +17,17 @@ echo -e "${RED}║  Claude Code Workflow Uninstaller     ║${NC}"
 echo -e "${RED}╚═══════════════════════════════════════╝${NC}"
 echo
 
-# Подтверждение
-read -p "Удалить все компоненты воркфлоу? [y/N] " -n 1 -r
+# Confirmation
+read -p "Remove all workflow components? [y/N] " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Отменено."
+    echo "Cancelled."
     exit 0
 fi
 
-echo -e "\n${BLUE}Удаление...${NC}\n"
+echo -e "\n${BLUE}Removing...${NC}\n"
 
-# Команды
+# Commands
 COMMANDS=(
     "orchestrate.md"
     "orchestrate-research.md"
@@ -35,7 +35,7 @@ COMMANDS=(
     "orchestrate-execute.md"
 )
 
-echo -e "${BLUE}[1/3] Команды${NC}"
+echo -e "${BLUE}[1/3] Commands${NC}"
 for cmd in "${COMMANDS[@]}"; do
     if [ -f "$CLAUDE_DIR/commands/$cmd" ]; then
         rm "$CLAUDE_DIR/commands/$cmd"
@@ -43,7 +43,7 @@ for cmd in "${COMMANDS[@]}"; do
     fi
 done
 
-# Агенты (только кастомные, не трогаем core/)
+# Agents (only custom ones, don't touch core/)
 AGENTS=(
     "codebase-locator.md"
     "codebase-analyzer.md"
@@ -53,7 +53,7 @@ AGENTS=(
     "second-opinion.md"
 )
 
-echo -e "\n${BLUE}[2/3] Агенты (кастомные)${NC}"
+echo -e "\n${BLUE}[2/3] Agents (custom)${NC}"
 for agent in "${AGENTS[@]}"; do
     if [ -f "$CLAUDE_DIR/agents/$agent" ]; then
         rm "$CLAUDE_DIR/agents/$agent"
@@ -61,17 +61,17 @@ for agent in "${AGENTS[@]}"; do
     fi
 done
 
-# Валидаторы
-echo -e "\n${BLUE}[3/3] Валидаторы${NC}"
+# Validators
+echo -e "\n${BLUE}[3/3] Validators${NC}"
 if [ -f "$CLAUDE_DIR/validators/validate-orchestrate-files.py" ]; then
     rm "$CLAUDE_DIR/validators/validate-orchestrate-files.py"
     echo -e "  ${RED}✗${NC} validate-orchestrate-files.py"
 fi
 
 echo
-echo -e "${YELLOW}Примечание:${NC}"
-echo -e "  - Агенты в core/ не удалены (могут использоваться другими)"
-echo -e "  - Хук в settings.json нужно удалить вручную"
-echo -e "  - Перезапусти Claude Code"
+echo -e "${YELLOW}Note:${NC}"
+echo -e "  - Agents in core/ were not removed (may be used by others)"
+echo -e "  - Hook in settings.json must be removed manually"
+echo -e "  - Restart Claude Code"
 echo
-echo -e "${GREEN}Удаление завершено.${NC}"
+echo -e "${GREEN}Uninstall complete.${NC}"
