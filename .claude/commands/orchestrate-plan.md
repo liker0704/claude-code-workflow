@@ -236,14 +236,63 @@ Break each phase into atomic tasks:
 - `medium`: new features, API changes, refactoring, database schema
 - `low`: docs, config, minor fixes, styling
 
-**Review flag:**
-Set `Review: true` when:
-- Risk is high
-- Task blocks many other tasks
-- Architectural changes
-- New patterns/abstractions introduced
+**Review flag:** ALL tasks get reviewed (mandatory). The `Review` field is deprecated.
 
-## Step 9: Create Tasks File
+## Step 9: Define Interface Contracts
+
+**CRITICAL STEP: Before creating tasks.md, define the CONTRACTS between tasks.**
+
+For each task that has dependencies or dependents:
+
+```
+## Interface Contracts
+
+### task-01 → task-02, task-03
+
+task-01 PRODUCES:
+- File: src/models/user.py
+- Exports: User (class), UserSchema (class)
+- Interface:
+  ```python
+  class User:
+      id: int
+      email: str
+      created_at: datetime
+
+      def to_dict(self) -> dict: ...
+  ```
+
+task-02 EXPECTS from task-01:
+- User class with to_dict() method
+- UserSchema for validation
+
+task-03 EXPECTS from task-01:
+- User class importable from src/models/user
+
+---
+
+### task-02 → task-04
+
+task-02 PRODUCES:
+- File: src/services/auth.py
+- Exports: AuthService (class), authenticate (function)
+- Interface:
+  ```python
+  def authenticate(token: str) -> User:
+      """Returns User or raises AuthError"""
+  ```
+
+task-04 EXPECTS from task-02:
+- authenticate function that returns User object
+- AuthError exception for error handling
+```
+
+**Why contracts matter:**
+- Prevents implementer from inventing incompatible interfaces
+- Makes dependencies explicit and verifiable
+- Catches integration issues at planning time
+
+## Step 10: Create Tasks File
 
 Write `plan/tasks.md`:
 
@@ -252,6 +301,37 @@ Write `plan/tasks.md`:
 
 Generated: {YYYY-MM-DD HH:MM:SS}
 Total tasks: {N}
+
+## Interface Contracts
+
+Define what each task produces and expects:
+
+### Contract: task-01 → task-02
+
+**task-01 PRODUCES:**
+```yaml
+files:
+  - path: src/models/user.py
+    exports:
+      - name: User
+        type: class
+      - name: UserSchema
+        type: class
+
+interfaces:
+  - name: User.to_dict
+    signature: "def to_dict(self) -> dict"
+    returns: "Dictionary with id, email, created_at keys"
+```
+
+**task-02 EXPECTS:**
+```yaml
+from_task_01:
+  - User class with to_dict() method
+  - User importable from src/models/user
+```
+
+---
 
 ## Summary
 
@@ -268,7 +348,6 @@ Total tasks: {N}
 - **Phase**: 1
 - **Type**: implement
 - **Risk**: low | medium | high
-- **Review**: true | false
 - **Description**: [specific details]
 - **Files**:
   - `path/to/file.py` (create/modify)
@@ -282,9 +361,51 @@ Total tasks: {N}
   - `pytest tests/test_file.py`
 - **Status**: pending
 
+- **PRODUCES (CONTRACT):**
+  ```yaml
+  files:
+    - path: "src/models/user.py"
+      exports: [User, UserSchema]
+  interfaces:
+    - name: "User"
+      type: "class"
+      methods:
+        - "to_dict() -> dict"
+        - "from_dict(data: dict) -> User"
+  ```
+
+- **EXPECTS (from dependencies):**
+  None (first task)
+
 ---
 
 ### task-02: {short-name}
+
+- **Phase**: 1
+- **Type**: implement
+- ...
+- **Depends on**: task-01
+- **Blocks**: task-04
+
+- **PRODUCES (CONTRACT):**
+  ```yaml
+  files:
+    - path: "src/services/auth.py"
+      exports: [AuthService, authenticate, AuthError]
+  interfaces:
+    - name: "authenticate"
+      signature: "def authenticate(token: str) -> User"
+      raises: "AuthError if token invalid"
+  ```
+
+- **EXPECTS (from task-01):**
+  ```yaml
+  from_task_01:
+    - "User class from src/models/user"
+    - "User.to_dict() method"
+  ```
+
+---
 
 [Continue for all tasks...]
 

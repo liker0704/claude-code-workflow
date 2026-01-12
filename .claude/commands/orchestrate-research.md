@@ -87,20 +87,89 @@ Status: researching
 Last-updated: {YYYY-MM-DD HH:MM:SS}
 ```
 
-## Step 4: Spawn Research Agents (Hybrid Mode)
+## Step 4: Assess Task Complexity
 
-Hybrid approach — sequential where needed, parallel where possible:
+**BEFORE spawning agents, assess complexity to determine research depth.**
+
+Read task description and categorize:
+
+```
+COMPLEXITY ASSESSMENT:
+
+Simple (1-2 files, single feature):
+  → Standard research (4 agents)
+
+Medium (3-10 files, multiple components):
+  → Standard research + additional domain agent
+
+Complex (10+ files, architectural changes, multiple systems):
+  → Extended research (6-8 agents, multiple passes)
+```
+
+**Indicators of COMPLEX task:**
+- Touches multiple directories/modules
+- Involves security, authentication, payments
+- Requires database schema changes
+- Affects public APIs
+- Spans frontend + backend
+- Has "refactor", "migrate", "redesign" in description
+
+**Show assessment to user:**
+```
+## Task Complexity Assessment
+
+Task: {task-slug}
+
+Indicators found:
+- [x] Multiple modules affected (src/auth/, src/api/, src/db/)
+- [x] Security-related changes
+- [ ] Database migration
+- [x] API changes
+
+Complexity: COMPLEX
+
+Research plan:
+- Standard agents (4): locator, analyzer, pattern-finder, web-researcher
+- Additional agents (2): security-researcher, api-analyzer
+- Multiple passes: YES (architecture overview first)
+
+Proceed with extended research? [Yes/Modify/Simple]
+```
+
+---
+
+## Step 5: Spawn Research Agents (Adaptive Mode)
+
+### Standard Mode (Simple/Medium tasks)
 
 ```
 Locator → Analyzer → [Pattern Finder || Web Researcher] → Synthesizer
          sequential              PARALLEL
 ```
 
-**~5 min total** (vs ~12 min fully sequential)
+**~5 min total**
+
+### Extended Mode (Complex tasks)
+
+```
+Phase A (Architecture Overview):
+  Locator (broad) → Architecture Overview Agent
+
+Phase B (Deep Analysis - PARALLEL):
+  [Analyzer || Pattern Finder || Web Researcher || Domain Specialist]
+
+Phase C (Gaps Check):
+  Gaps Analyzer → Additional targeted research if needed
+
+Phase D:
+  Synthesizer (with all inputs)
+```
+
+**~10-15 min total** (but catches issues that would cost hours later)
 
 ---
 
-### Step 4.1: Locator (sequential)
+### Step 5.1: Locator (sequential)
 ```yaml
 Tool: Task
 Parameters:
@@ -233,7 +302,78 @@ Choose [1/2/3]:
 
 **Lazy reading exception:** If agent fails without useful return, MAY read its partial report file.
 
-## Step 7: Spawn Synthesizer
+## Step 7: Gaps Check (For Complex Tasks)
+
+**For COMPLEX tasks only.** Skip for Simple/Medium.
+
+After all research agents complete, check for gaps:
+
+```yaml
+Tool: Task
+Parameters:
+  subagent_type: "general-purpose"
+  prompt: |
+    You are the GAPS ANALYZER — identify what the research missed.
+
+    ## Research Reports Available
+    - codebase-locator.md: {summary}
+    - codebase-analyzer.md: {summary}
+    - codebase-pattern-finder.md: {summary}
+    - web-search-researcher.md: {summary}
+
+    ## Task Description
+    {full task description}
+
+    ## Your Mission
+    Identify GAPS in the research:
+
+    1. **Missing Areas**: What parts of codebase weren't explored?
+       - Are there related modules not covered?
+       - Database schemas checked?
+       - Config files checked?
+       - Tests checked?
+
+    2. **Unanswered Questions**: What should we know but don't?
+       - How does authentication work here?
+       - What's the error handling pattern?
+       - What are the existing tests covering?
+
+    3. **Risk Areas**: What might cause problems?
+       - Breaking changes?
+       - Migration needs?
+       - External dependencies?
+
+    ## Output Format
+    ```
+    ## Gaps Analysis
+
+    ### Critical Gaps (MUST research before planning)
+    - {gap 1}: Need to check {what}
+    - {gap 2}: Need to understand {what}
+
+    ### Recommended Additional Research
+    - Agent: {type}, Focus: {specific area}
+    - Agent: {type}, Focus: {specific area}
+
+    ### Acceptable Gaps (can proceed)
+    - {minor gap}: Low risk because {reason}
+
+    ## Verdict
+    PROCEED | NEED_MORE_RESEARCH
+    ```
+  description: "Check research gaps"
+```
+
+**If NEED_MORE_RESEARCH:**
+1. Show gaps to user
+2. Offer to spawn additional targeted agents
+3. Re-run gaps check after
+
+**If PROCEED:** Continue to Synthesizer.
+
+---
+
+## Step 8: Spawn Synthesizer
 
 Spawn synthesizer agent to read all reports and create summary:
 

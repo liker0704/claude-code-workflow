@@ -76,21 +76,32 @@ task_timeout: 600000      # 10 minutes per task
 max_parallel_tasks: 3     # Max concurrent tasks
 ```
 
-## Review Strategy
+## Review Strategy (MANDATORY GATES)
 
-### Task Pipeline
-
-Each task follows this pipeline:
 ```
-implementer → tester → [task review] → complete
+╔═══════════════════════════════════════════════════════════════╗
+║  REVIEWS ARE MANDATORY BLOCKING GATES — NOT OPTIONAL          ║
+║  YOU CANNOT PROCEED TO NEXT TASK WITHOUT REVIEW APPROVAL      ║
+╚═══════════════════════════════════════════════════════════════╝
 ```
 
-### Task-Level Review
+### Task Pipeline (ENFORCED)
 
-Triggered when task has `Review: true` in tasks.md.
-- Happens immediately after tester completes
-- Catches issues before they affect dependent tasks
+Each task follows this **mandatory** pipeline:
+```
+implementer → tester → REVIEW GATE → complete
+                          ↓
+                    BLOCKED until APPROVED
+```
+
+**There is no optional review. Every task gets reviewed.**
+
+### Task-Level Review (MANDATORY)
+
+**ALWAYS happens after every task completes.** Not optional.
+- Catches issues before they propagate to dependent tasks
 - Uses `reviewer` agent
+- **BLOCKS** progress until verdict is APPROVED
 
 ```yaml
 Tool: Task
@@ -120,14 +131,43 @@ Parameters:
   description: "Review task-{XX}"
 ```
 
-**If NEEDS_CHANGES:** spawn implementer to fix, then re-test, re-review.
+**If NEEDS_CHANGES:**
+1. Spawn implementer to fix
+2. Re-run tester
+3. Re-run review
+4. **DO NOT proceed until APPROVED**
 
-### Batch-Level Review
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  VALIDATION GATE: TASK REVIEW                                 ║
+╠═══════════════════════════════════════════════════════════════╣
+║  Status: {APPROVED | NEEDS_CHANGES | BLOCKED}                 ║
+║                                                               ║
+║  IF NOT APPROVED:                                             ║
+║    → FIX issues                                               ║
+║    → RE-RUN review                                            ║
+║    → REPEAT until APPROVED                                    ║
+║                                                               ║
+║  YOU CANNOT START NEXT TASK UNTIL THIS GATE PASSES            ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+---
+
+### Batch-Level Review (MANDATORY GATE)
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  BATCH REVIEW IS A BLOCKING GATE                              ║
+║  NEXT BATCH CANNOT START UNTIL CURRENT BATCH IS APPROVED      ║
+╚═══════════════════════════════════════════════════════════════╝
+```
 
 **ALWAYS** happens after all tasks in a batch complete.
-- Reviews integration of all batch changes together
+- Reviews integration of ALL batch changes together
 - Ensures no conflicts between parallel tasks
 - Uses `reviewer` agent with broader scope
+- **BLOCKS** next batch until APPROVED
 
 #### Review Mode Selection
 
@@ -395,6 +435,32 @@ Tasks starting:
 [Starting {N} parallel agents...]
 ```
 
+### Pre-Implementation: Gather Dependency Context
+
+**BEFORE spawning implementer**, compile context from all completed dependencies:
+
+```
+For task-{XX}:
+  dependencies = tasks.md[task-XX].depends_on
+
+  context_package = {
+    "from_dependencies": {}
+  }
+
+  For each dep in dependencies:
+    dep_report = read execution/task-{dep}-{name}.md
+    context_package.from_dependencies[dep] = {
+      "files_created": dep_report.for_dependents.files_created,
+      "exports": dep_report.for_dependents.exports,
+      "interfaces": dep_report.for_dependents.interfaces,
+      "usage_example": dep_report.for_dependents.usage_example
+    }
+```
+
+**This context is CRITICAL. Implementer MUST know what dependencies produced.**
+
+---
+
 Spawn agents in parallel (single message, multiple Task calls):
 
 ```yaml
@@ -416,6 +482,41 @@ Parameters:
     ### Patterns to Follow
     {patterns from research}
 
+    ---
+    ## CONTEXT FROM DEPENDENCIES (CRITICAL - READ CAREFULLY)
+
+    Your task depends on these completed tasks. USE their outputs:
+
+    {For each dependency:}
+    ### From task-{dep}: {dep-name}
+
+    **Files created:**
+    {list of files this dependency created}
+
+    **Exports/Interfaces available:**
+    ```
+    {function signatures, class definitions, exports}
+    ```
+
+    **Usage example:**
+    ```
+    {how to use what dependency created}
+    ```
+
+    **IMPORTANT:** Use EXACTLY these interfaces. Do NOT invent your own.
+    ---
+
+    ### What YOU Must Produce (CONTRACT)
+
+    Tasks that depend on YOU expect:
+    - Files: {files you must create}
+    - Exports: {what you must export}
+    - Interface: {function signatures dependent tasks expect}
+
+    **You MUST produce these exact interfaces for downstream tasks.**
+
+    ---
+
     ### Verification
     After implementation, run:
     {verification commands}
@@ -424,21 +525,69 @@ Parameters:
     Write your report to this EXACT path:
     tmp/.orchestrate/{task-slug}/execution/task-{XX}-{name}.md
 
-    Rules:
-    - Use this EXACT path - no modifications
-    - Create parent directories if needed
-    - Format: Markdown with sections below
-
     Include in report:
-    1. Files changed (with change type)
-    2. Brief summary of implementation
-    3. Test results (pass/fail)
-    4. Any issues encountered
-    5. **For Dependents** section (CRITICAL for downstream tasks):
-       - New files/exports created
-       - API signatures introduced
-       - Config changes needed
-       - Patterns to follow
+
+    1. **Files Changed**
+       | File | Action | Description |
+       |------|--------|-------------|
+       | path | created/modified | what changed |
+
+    2. **Implementation Summary**
+       {2-3 sentences}
+
+    3. **Test Results**
+       {pass/fail}
+
+    4. **Issues Encountered**
+       {any problems and how resolved}
+
+    5. **FOR DEPENDENTS (STRUCTURED CONTRACT)**
+
+       ```yaml
+       files_created:
+         - path: "src/auth/service.py"
+           description: "Authentication service"
+
+       exports:
+         - name: "AuthService"
+           type: "class"
+           location: "src/auth/service.py"
+         - name: "authenticate"
+           type: "function"
+           signature: "authenticate(token: str) -> User"
+           location: "src/auth/service.py"
+
+       interfaces:
+         - name: "authenticate"
+           signature: |
+             def authenticate(token: str) -> User:
+                 """Validates JWT token and returns User object.
+
+                 Args:
+                     token: JWT token string
+
+                 Returns:
+                     User object with id, email, roles
+
+                 Raises:
+                     AuthError: If token is invalid
+                 """
+           usage: |
+             from src.auth.service import authenticate
+             user = authenticate(request.headers["Authorization"])
+
+       config_changes:
+         - file: ".env"
+           key: "JWT_SECRET"
+           required: true
+
+       patterns_to_follow:
+         - "Use AuthService.authenticate() for all protected endpoints"
+         - "Catch AuthError and return 401"
+       ```
+
+       **This section is CRITICAL. Downstream tasks WILL fail without it.**
+
   run_in_background: true
   description: "Execute task-{XX}"
 ```
