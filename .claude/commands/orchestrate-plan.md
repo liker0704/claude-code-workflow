@@ -128,23 +128,73 @@ Break each phase into atomic tasks with:
 **Types:** implement, modify, test, config, docs
 **Risk levels:** high (auth, security, payments), medium (features, API, refactoring), low (docs, config, styling)
 
+## Step 8.5: Validate Task Decomposition
+
+Before creating tasks.md, validate decomposition:
+
+### Completeness Check
+```
+For each goal in plan.md:
+  Find tasks that contribute to this goal
+  If none found → ERROR: Goal "{goal}" not covered by any task
+```
+
+### Dependency Validation
+```
+Build dependency graph from tasks
+
+Check for cycles:
+  If cycle detected → ERROR: Circular dependency: task-02 → task-03 → task-02
+
+Check for orphans:
+  If task has no dependents and task != final-review:
+    WARNING: Task "{task}" doesn't block anything - is it needed?
+
+Check for missing deps:
+  If task depends on non-existent task:
+    ERROR: task-03 depends on task-99 which doesn't exist
+```
+
+### Parallelization Analysis
+```
+batches = topological_sort(tasks)
+max_parallel = max(len(batch) for batch in batches)
+total_batches = len(batches)
+
+Show: "Execution: {total_batches} batches, max {max_parallel} parallel"
+```
+
+### Present Validation
+```
+## Task Decomposition Validation
+
+Goals coverage: ✅ All 3 goals have tasks
+Dependencies: ✅ No cycles, no missing
+Orphan tasks: ⚠️ task-04 doesn't block anything
+Parallelization: 4 batches, max 3 parallel
+
+[Proceed] | [Fix Issues]
+```
+
+---
+
 ## Step 9: Define Interface Contracts
 
 **CRITICAL: Before tasks.md, define CONTRACTS between tasks.**
 
-```yaml
+```markdown
 ## Contract: task-01 → task-02
 
-task-01 PRODUCES:
-  files: [src/models/user.py]
-  exports: [User, UserSchema]
-  interface:
-    name: User.to_dict
-    signature: "def to_dict(self) -> dict"
+### task-01 PRODUCES:
+| Type | Name | Location |
+|------|------|----------|
+| File | src/models/user.py | created |
+| Export | User, UserSchema | from src/models/user |
+| Interface | User.to_dict() | `def to_dict(self) -> dict` |
 
-task-02 EXPECTS from task-01:
-  - User class with to_dict() method
-  - Importable from src/models/user
+### task-02 EXPECTS:
+- User class with to_dict() method
+- Importable from src/models/user
 ```
 
 ## Step 10: Create Tasks File
@@ -160,11 +210,13 @@ Total tasks: {N}
 ## Interface Contracts
 
 ### Contract: task-01 → task-02
+
 **task-01 PRODUCES:**
-```yaml
-files: [{path: src/models/user.py, exports: [User, UserSchema]}]
-interfaces: [{name: User.to_dict, signature: "def to_dict(self) -> dict"}]
-```
+| Type | Name | Details |
+|------|------|---------|
+| File | src/models/user.py | exports: User, UserSchema |
+| Interface | User.to_dict() | `def to_dict(self) -> dict` |
+
 **task-02 EXPECTS:** User class from src/models/user
 
 ---
@@ -189,12 +241,14 @@ interfaces: [{name: User.to_dict, signature: "def to_dict(self) -> dict"}]
 - **Agent**: implementer
 - **Verification**: `pytest tests/test_file.py`
 - **Status**: pending
-- **PRODUCES:**
-  ```yaml
-  files: [{path, exports}]
-  interfaces: [{name, signature}]
-  ```
-- **EXPECTS:** None (first task)
+
+**PRODUCES:**
+| Type | Name | Details |
+|------|------|---------|
+| File | {path} | exports: {list} |
+| Interface | {name} | `{signature}` |
+
+**EXPECTS:** None (first task)
 
 ---
 

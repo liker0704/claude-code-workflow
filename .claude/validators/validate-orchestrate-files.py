@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Validator for orchestrate files structure.
-Validates task.md, tasks.md, plan.md when written to tmp/.orchestrate/.
+Validates task.md, tasks.md, plan.md, _plan.md when written to tmp/.orchestrate/.
 
 Exit codes:
   0 - Valid (allow)
@@ -88,6 +88,37 @@ def validate_plan_md(content: str) -> tuple[bool, list[str]]:
     return len(errors) == 0, errors
 
 
+def validate_research_plan_md(content: str) -> tuple[bool, list[str]]:
+    """Validate research _plan.md structure."""
+    errors = []
+
+    if "Status:" not in content:
+        errors.append("Missing Status field")
+
+    valid_statuses = ["draft", "approved", "executing", "complete"]
+    status_match = re.search(r"Status:\s*(\S+)", content)
+    if status_match:
+        status = status_match.group(1)
+        if status not in valid_statuses:
+            errors.append(f"Invalid research plan status '{status}'. Expected: {', '.join(valid_statuses)}")
+
+    # Check for required sections
+    required_sections = ["## 2. Research Questions", "## 4. Concerns Matrix", "## 7. Gaps Found"]
+    for section in required_sections:
+        if section not in content:
+            errors.append(f"Missing section: {section}")
+
+    # Check gap iterations format
+    if "**Gap iterations:**" in content:
+        gap_match = re.search(r"\*\*Gap iterations:\*\*\s*(\d+)/(\d+)", content)
+        if gap_match:
+            current, max_iter = int(gap_match.group(1)), int(gap_match.group(2))
+            if current > max_iter:
+                errors.append(f"Gap iterations {current} exceeds max {max_iter}")
+
+    return len(errors) == 0, errors
+
+
 def main():
     try:
         hook_input = get_hook_input()
@@ -112,6 +143,8 @@ def main():
             is_valid, errors = validate_tasks_md(content)
         elif filename == "plan.md":
             is_valid, errors = validate_plan_md(content)
+        elif filename == "_plan.md":
+            is_valid, errors = validate_research_plan_md(content)
         else:
             # Other files - no validation
             sys.exit(0)

@@ -48,7 +48,15 @@ cd claude-code-workflow
 The script:
 - Copies only missing files (doesn't overwrite existing ones)
 - Creates backups when updating validators
-- Configures hooks in settings.json (or shows instructions)
+- Configures hooks in settings.json
+
+### Upgrade
+
+```bash
+./install.sh --upgrade
+```
+
+Forces update of all files (commands, agents, validators) with automatic backup.
 
 ### Uninstall
 
@@ -64,8 +72,9 @@ The script:
 # 1. Initialize task
 /orchestrate "Add user authentication"
 
-# 2. Research the codebase (4 agents in parallel)
+# 2. Research the codebase
 /orchestrate-research add-user-auth
+# Scout → Research Plan → User Approval → Agents → Synthesis
 
 # 3. Create plan and decompose into tasks
 /orchestrate-plan add-user-auth
@@ -83,11 +92,12 @@ The script:
 ## Phases
 
 ### Phase 1: Research
-- **codebase-locator** → finds relevant files
-- **codebase-analyzer** → analyzes implementation
-- **codebase-pattern-finder** → finds similar patterns
-- **web-search-researcher** → researches external resources
-- Output: `research/_summary.md`
+1. **Scout agent** → quick scope reconnaissance
+2. **Research Plan** (`_plan.md`) → questions, areas, concerns matrix
+3. **User approval** → modify plan if needed
+4. **Research agents** → codebase-analyzer, codebase-locator, web-search-researcher
+5. **Coverage verification** → gap detection and resolution
+- Output: `research/_plan.md` + `research/_summary.md`
 
 ### Phase 2: Plan
 - **architect** → designs the solution
@@ -108,16 +118,17 @@ The script:
 tmp/.orchestrate/{task-slug}/
 ├── task.md                  # Metadata and status
 ├── research/
-│   ├── codebase-locator.md
-│   ├── codebase-analyzer.md
-│   ├── codebase-pattern-finder.md
-│   ├── web-search-researcher.md
-│   └── _summary.md
+│   ├── _plan.md             # Research plan (questions, scope, agents)
+│   ├── _summary.md          # Synthesized findings
+│   ├── _agents.json         # Agent tracking for resume
+│   ├── scout.md             # Scout analysis output
+│   └── {agent-id}.md        # Individual agent reports
 ├── plan/
 │   ├── plan.md              # Detailed plan
 │   └── tasks.md             # Task decomposition
 └── execution/
     ├── _progress.md
+    ├── _tasks.json
     ├── _final-review.md
     ├── _devils-advocate.md
     └── task-XX-*.md

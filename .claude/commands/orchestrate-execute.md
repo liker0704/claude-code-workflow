@@ -161,6 +161,7 @@ Parameters:
   subagent_type: "implementer"
   prompt: |
     ## Task: task-{XX}: {name}
+
     Description: {from tasks.md}
     Files: {to modify}
     Requirements: {specific}
@@ -171,27 +172,85 @@ Parameters:
     USE EXACTLY these interfaces.
 
     ## YOU MUST PRODUCE (CONTRACT)
-    Files: {you create}, Exports: {you export}, Interface: {signatures}
+    | Type | Name | Details |
+    |------|------|---------|
+    | File | {path} | {description} |
+    | Export | {name} | {signature} |
 
-    ## Verification
-    {commands to run}
+    ## IMPLEMENTATION PROCESS (MANDATORY)
 
-    ## OUTPUT (CRITICAL)
+    ### Step 1: Understand First
+    BEFORE writing code:
+    - Read ALL files you will modify
+    - Read interface contracts from dependencies
+    - List your assumptions
+
+    ### Step 2: Plan
+    Write brief implementation plan:
+    - What changes to each file?
+    - What could go wrong?
+
+    ### Step 3: Implement
+    Write the code.
+
+    ### Step 4: Self-Review (Chain-of-Verification)
+    For each change:
+    - Does it follow project patterns? (check existing code)
+    - Does it handle errors?
+    - Does it match interface contract?
+
+    ### Step 5: Test
+    Run: {verification commands}
+
+    ## OUTPUT FORMAT
+
     Write to: tmp/.orchestrate/{task-slug}/execution/task-{XX}-{name}.md
 
-    Include:
-    1. Files Changed (table)
-    2. Implementation Summary
-    3. Test Results
-    4. Issues
-    5. FOR DEPENDENTS:
-       ```yaml
-       files_created: [{path, description}]
-       exports: [{name, type, signature, location}]
-       interfaces: [{name, signature, usage}]
-       config_changes: [{file, key, required}]
-       patterns_to_follow: [...]
-       ```
+    ```markdown
+    # Task Report: task-{XX}
+
+    ## Status
+    IMPLEMENTATION COMPLETE | IMPLEMENTATION BLOCKED
+
+    ## Understanding Phase
+    **Files read**: {list}
+    **Assumptions**: {list}
+
+    ## Implementation Plan
+    {brief plan}
+
+    ## Changes Made
+    | File | Type | Description |
+    |------|------|-------------|
+
+    ## Self-Review
+    - Patterns followed: ✅/❌
+    - Error handling: ✅/❌
+    - Contract matched: ✅/❌
+
+    ## Verification
+    **Command**: {what ran}
+    **Result**: PASS / FAIL
+    **Output**: {summary}
+
+    ## FOR DEPENDENTS
+
+    ### Files Created
+    | File | Exports |
+    |------|---------|
+
+    ### Interfaces
+    | Name | Signature | Usage |
+    |------|-----------|-------|
+
+    ### Config Changes
+    | File | Key | Required |
+    |------|-----|----------|
+
+    ## Concerns
+    - {any risks or issues}
+    ```
+
   run_in_background: true
   description: "Execute task-{XX}"
 ```

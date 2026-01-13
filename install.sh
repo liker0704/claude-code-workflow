@@ -8,6 +8,21 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_DIR="$HOME/.claude"
 BACKUP_DIR="$CLAUDE_DIR/.backup-$(date +%Y%m%d-%H%M%S)"
+UPGRADE_MODE=false
+
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --upgrade|-u) UPGRADE_MODE=true ;;
+        --help|-h)
+            echo "Usage: ./install.sh [--upgrade]"
+            echo "  --upgrade, -u  Force update all files (backup existing)"
+            exit 0
+            ;;
+        *) echo "Unknown option: $1"; exit 1 ;;
+    esac
+    shift
+done
 
 # Colors
 RED='\033[0;31m'
@@ -17,7 +32,11 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 echo -e "${BLUE}╔═══════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║  Claude Code Workflow Installer       ║${NC}"
+if [ "$UPGRADE_MODE" = true ]; then
+    echo -e "${BLUE}║  Claude Code Workflow Upgrader        ║${NC}"
+else
+    echo -e "${BLUE}║  Claude Code Workflow Installer       ║${NC}"
+fi
 echo -e "${BLUE}╚═══════════════════════════════════════╝${NC}"
 echo
 
@@ -64,7 +83,13 @@ copy_with_backup() {
 echo -e "${BLUE}[1/4] Commands${NC}"
 mkdir -p "$CLAUDE_DIR/commands"
 for cmd in "$SCRIPT_DIR/.claude/commands"/*.md; do
-    [ -f "$cmd" ] && copy_if_not_exists "$cmd" "$CLAUDE_DIR/commands/$(basename "$cmd")"
+    if [ -f "$cmd" ]; then
+        if [ "$UPGRADE_MODE" = true ]; then
+            copy_with_backup "$cmd" "$CLAUDE_DIR/commands/$(basename "$cmd")"
+        else
+            copy_if_not_exists "$cmd" "$CLAUDE_DIR/commands/$(basename "$cmd")"
+        fi
+    fi
 done
 
 # 2. Install agents
@@ -72,11 +97,23 @@ echo -e "\n${BLUE}[2/4] Agents${NC}"
 mkdir -p "$CLAUDE_DIR/agents/core"
 
 for agent in "$SCRIPT_DIR/.claude/agents"/*.md; do
-    [ -f "$agent" ] && copy_if_not_exists "$agent" "$CLAUDE_DIR/agents/$(basename "$agent")"
+    if [ -f "$agent" ]; then
+        if [ "$UPGRADE_MODE" = true ]; then
+            copy_with_backup "$agent" "$CLAUDE_DIR/agents/$(basename "$agent")"
+        else
+            copy_if_not_exists "$agent" "$CLAUDE_DIR/agents/$(basename "$agent")"
+        fi
+    fi
 done
 
 for agent in "$SCRIPT_DIR/.claude/agents/core"/*.md; do
-    [ -f "$agent" ] && copy_if_not_exists "$agent" "$CLAUDE_DIR/agents/core/$(basename "$agent")"
+    if [ -f "$agent" ]; then
+        if [ "$UPGRADE_MODE" = true ]; then
+            copy_with_backup "$agent" "$CLAUDE_DIR/agents/core/$(basename "$agent")"
+        else
+            copy_if_not_exists "$agent" "$CLAUDE_DIR/agents/core/$(basename "$agent")"
+        fi
+    fi
 done
 
 # 3. Install validators

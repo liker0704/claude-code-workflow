@@ -134,9 +134,10 @@ Directory: tmp/.orchestrate/{task-slug}/
 
 ### Phase 1: Research
 Understand the codebase and explore solution options.
-- Spawns 4 parallel agents to analyze codebase
+- Scout agent analyzes scope first
+- Creates formal research plan for your approval
+- Spawns research agents based on plan (scales with complexity)
 - Synthesizes findings into research summary
-- You approve the direction before planning
 
 Command: /orchestrate-research {task-slug}
 
@@ -182,12 +183,11 @@ tmp/.orchestrate/{task-slug}/
 ├── task.md                     # Task description & status (canonical)
 │
 ├── research/                   # Phase 1: Research
+│   ├── _plan.md               # Research plan (questions, scope, agents)
 │   ├── _summary.md            # Synthesized findings
 │   ├── _agents.json           # Agent task IDs for resume
-│   ├── codebase-locator.md
-│   ├── codebase-analyzer.md
-│   ├── codebase-pattern-finder.md
-│   └── web-search-researcher.md
+│   ├── scout.md               # Scout analysis output
+│   └── {agent-id}.md          # Individual agent reports
 │
 ├── plan/                       # Phase 2: Plan
 │   ├── plan.md                # Detailed implementation plan
