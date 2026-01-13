@@ -24,7 +24,10 @@ Research phase for task: **$ARGUMENTS**
 
 ## Step 1-3: Validate & Update Status
 
-Check task exists, update to `Status: researching`
+Check task exists. Handle current status:
+- **initialized**: Proceed to Step 4
+- **researching**: Check `_agents.json`, resume incomplete agents via TaskOutput
+- **research-complete+**: Offer view summary / re-run / proceed to plan
 
 ## Step 4: Plan Research Coverage
 
@@ -81,7 +84,11 @@ Wait, merge into `{combined_analyzer_summary}`.
 Spawn all remaining instances at once.
 Wait, collect all summaries.
 
-**Track in `research/_agents.json` for session resume.**
+**Session resume:** Save spawned agents to `research/_agents.json`:
+```json
+{"agents": [{"id": "xxx", "type": "locator", "focus": "...", "status": "running|done"}]}
+```
+On resume: read file, use TaskOutput for running agents, skip done ones.
 
 ## Step 6: Progress & Failures
 
@@ -89,7 +96,12 @@ Show progress as agents complete. On failure: Retry / Continue / Replace / Abort
 
 ## Step 7: Gaps Check
 
-Spawn gaps analyzer to find what was missed. If gaps found → spawn additional targeted agents.
+Spawn gaps analyzer (general-purpose agent) to find:
+- Code areas not covered by any locator
+- Concerns not analyzed (security? performance? edge cases?)
+- External topics not researched
+
+If critical gaps found → spawn additional targeted agents, re-check.
 
 ## Step 8: Synthesize
 
