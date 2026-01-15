@@ -12,7 +12,7 @@ Before anything else, check for active orchestrate tasks:
 
 1. Search for all `task.md` files in `tmp/.orchestrate/*/`
 2. For each, read the Status field
-3. Filter to active statuses: `initialized`, `researching`, `research-complete`, `planning`, `plan-complete`, `executing`, `blocked`
+3. Filter to active statuses: `initialized`, `researching`, `research-complete`, `architecting`, `arch-review`, `arch-iteration`, `arch-escalated`, `planning`, `plan-complete`, `executing`, `blocked`
 4. Display summary:
 
 ```
@@ -112,6 +112,7 @@ Schema-version: 1.0
 ## Phases
 
 - [ ] Research — understand codebase and options
+- [ ] Architecture — design solution (if complexity >= 5)
 - [ ] Plan — create detailed implementation plan
 - [ ] Execute — implement via specialized agents
 
@@ -138,12 +139,27 @@ Understand the codebase and explore solution options.
 - Creates formal research plan for your approval
 - Spawns research agents based on plan (scales with complexity)
 - Synthesizes findings into research summary
+- **Calculates complexity score for architecture gate**
 
 Command: /orchestrate-research {task-slug}
 
+### Phase 1.5: Architecture (Conditional)
+Create architectural decision for complex tasks.
+- **Triggered automatically** when complexity score >= 5
+- Generates ADR (Architecture Decision Record)
+- Requires human approval before planning
+- Max 3 revision iterations
+
+**Complexity Formula:**
+```
+score = new_modules×3 + modified_files×0.5 + new_deps×2 + (4 if cross_cutting)
+```
+
+Command: /orchestrate-architecture {task-slug}
+
 ### Phase 2: Plan
 Create detailed implementation plan and decompose into tasks.
-- Based on research findings
+- Based on research findings **and approved architecture**
 - Breaks work into atomic, verifiable tasks
 - Two approval stages: plan, then task breakdown
 
@@ -170,10 +186,29 @@ Ready to begin?
 
 Valid status transitions:
 ```
-initialized → researching → research-complete → planning → plan-complete → executing → complete
-                                                                              ↓
-                                                                          blocked
-Any status → abandoned (explicit user action)
+initialized → researching → research-complete ──┬── (low complexity) ──→ planning
+                                                │
+                                                └── (high complexity) ──→ architecting
+                                                                              │
+                                                    ┌─────────────────────────┘
+                                                    ▼
+                                               arch-review ◀──┐
+                                                    │         │
+                                              ┌─────┴─────┐   │
+                                              ▼           ▼   │
+                                          planning    arch-iteration
+                                              │        (iter<3)┘
+                                              │             │
+                                              │       (iter>=3)
+                                              │             ▼
+                                              │       arch-escalated
+                                              │             │
+                                              ▼             ▼
+                                        plan-complete → executing → complete
+                                                              ↓
+                                                          blocked
+
+Any status → abandoned | cancelled (explicit user action)
 ```
 
 ## Directory Structure
@@ -181,6 +216,7 @@ Any status → abandoned (explicit user action)
 ```
 tmp/.orchestrate/{task-slug}/
 ├── task.md                     # Task description & status (canonical)
+├── architecture.md             # Architecture decision (if complexity >= 5)
 │
 ├── research/                   # Phase 1: Research
 │   ├── _plan.md               # Research plan (questions, scope, agents)
@@ -202,9 +238,10 @@ tmp/.orchestrate/{task-slug}/
 ## User Decision Points
 
 At each phase transition, user explicitly approves:
-1. **Research → Plan**: User approves recommended approach
-2. **Plan → Execute**: Two stages - plan approval, then task breakdown approval
-3. **Execute → Complete**: User confirms all tasks done
+1. **Research → Architecture/Plan**: User approves recommended approach (architecture auto-triggers if complex)
+2. **Architecture → Plan**: User approves architectural decision (max 3 iterations)
+3. **Plan → Execute**: Two stages - plan approval, then task breakdown approval
+4. **Execute → Complete**: User confirms all tasks done
 
 ## Error Handling
 

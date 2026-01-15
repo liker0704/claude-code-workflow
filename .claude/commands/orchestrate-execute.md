@@ -140,6 +140,23 @@ Started: {timestamp}
 
 Parse `plan/tasks.md` for: task list, dependencies, batches, agent assignments, verification commands
 
+## Step 4.5: Load Architecture Scope (NEW)
+
+If `architecture.md` exists in task directory:
+
+1. Parse Components table to get expected files:
+```python
+architecture_scope = {
+    "create": ["src/path/new.ts", ...],    # Files marked CREATE
+    "modify": ["src/path/existing.ts", ...],  # Files marked MODIFY
+    "delete": ["src/path/old.ts", ...]     # Files marked DELETE
+}
+```
+
+2. Store for scope checking during execution.
+
+**If architecture.md missing or was skipped:** Skip scope checking.
+
 ## Execution Loop
 
 ### Ready Tasks
@@ -283,10 +300,50 @@ Update `_progress.md` as tasks execute.
 
 1. Check success
 2. Run verification
-3. Update status
-4. Write report
-5. Find newly ready tasks
-6. Continue
+3. **Scope check (if architecture exists)**
+4. Update status
+5. Write report
+6. Find newly ready tasks
+7. Continue
+
+### Scope Check (NEW)
+
+After task completes, if `architecture_scope` is loaded:
+
+```python
+# Get files modified by this task (from task report "## Changes Made" table)
+task_files = extract_modified_files(task_report)
+
+for file in task_files:
+    all_expected = (
+        architecture_scope.get("create", []) +
+        architecture_scope.get("modify", []) +
+        architecture_scope.get("delete", [])
+    )
+    if file not in all_expected:
+        # File not in architecture
+        show_warning(file)
+```
+
+**Warning format:**
+```
+⚠️ Scope Warning
+
+File `{path}` was modified but not in architecture.md
+
+This may indicate scope creep or missing architecture update.
+
+Options:
+1. [Continue] Proceed (file is legitimate addition)
+2. [Update] Add to architecture.md
+3. [Revert] Undo this change
+4. [Stop] Pause execution for review
+```
+
+**If user selects Update:** Add file to architecture.md Components table.
+**If user selects Continue:** Log warning and proceed.
+**If user selects Revert:** Run `git checkout -- {file}` and re-run task.
+**If user selects Stop:** Set status to `blocked`.
 
 ## Handling Failures
 

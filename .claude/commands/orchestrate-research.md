@@ -489,6 +489,72 @@ Coverage: {percentage}
 
 ---
 
+## Step 11.5: Complexity Assessment (NEW)
+
+Calculate complexity score for Architecture Gate.
+
+### Metrics to Collect
+
+From research findings, count:
+- **new_modules**: New services, major components, or standalone modules
+- **modified_files**: Files that need changes
+- **new_dependencies**: External packages/libraries to add
+- **cross_cutting**: Does task involve logging, auth, caching, error handling, or multiple layers?
+
+### cross_cutting Criteria
+
+Set `cross_cutting: true` if task involves ANY of:
+- Logging / monitoring / observability
+- Authentication / authorization
+- Caching strategy
+- Error handling patterns (global)
+- Multiple architectural layers (UI + API + DB together)
+- Shared utilities used by 3+ modules
+
+### Complexity Formula
+
+```python
+score = (
+    new_modules * 3 +        # New module = serious decision
+    modified_files * 0.5 +   # Many files != complex
+    new_dependencies * 2 +   # External dependency = risk
+    (4 if cross_cutting else 0)  # Cross-cutting = architectural
+)
+threshold = 5
+```
+
+### Add to _plan.md Section 8
+
+```markdown
+## 8. Complexity Assessment
+
+| Metric | Value | Weight | Contribution |
+|--------|-------|--------|--------------|
+| New modules | {N} | ×3 | {N*3} |
+| Modified files | {N} | ×0.5 | {N*0.5} |
+| New dependencies | {N} | ×2 | {N*2} |
+| Cross-cutting | {Yes/No} | +4 | {0 or 4} |
+| **Total** | | | **{score}** |
+
+Threshold: 5
+**Requires architecture:** {Yes if score >= 5, else No}
+
+### Cross-cutting Analysis
+{If cross_cutting=true, explain which criteria apply}
+```
+
+### Present in Summary
+
+Include in Step 12 presentation:
+
+```
+### Complexity Assessment
+Score: {score} (threshold: 5)
+Architecture phase: {Required / Not required}
+```
+
+---
+
 ## Step 12: Present Results
 
 ```
@@ -507,14 +573,25 @@ Coverage: {X}%
 ### Files to Modify
 {list}
 
+### Complexity Assessment
+Score: {score} (threshold: 5)
+Architecture phase: {Required / Not required}
+
 ---
 Full summary: research/_summary.md
 Full plan: research/_plan.md
 
-[Approve] | [Questions] | [More Research] | [Re-do]
+{If architecture required:}
+[Approve] → Architecture Phase | [Questions] | [More Research] | [Re-do]
+
+{If architecture NOT required:}
+[Approve] → Plan Phase | [Force Architecture] | [Questions] | [More Research]
 ```
 
-**On Approve:** Update `task.md` to `Status: research-complete`, mark `[x] Research`.
+**On Approve:**
+1. Update `task.md` to `Status: research-complete`, mark `[x] Research`
+2. If complexity >= threshold: Show `Run /orchestrate-architecture {task-slug}`
+3. If complexity < threshold: Show `Run /orchestrate-plan {task-slug}`
 
 ---
 

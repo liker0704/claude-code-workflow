@@ -14,7 +14,8 @@ You are a **coordinator**:
 
 ## Entry/Exit Criteria
 
-**Entry:** `task.md` has `Status: research-complete`, `research/_summary.md` exists
+**Entry:** `task.md` has `Status: research-complete` OR `planning`, `research/_summary.md` exists
+**Additional:** If complexity >= 5, `architecture.md` should exist and be approved
 **Exit:** `task.md` updated to `Status: plan-complete`, `plan/plan.md` approved, `plan/tasks.md` created
 
 ## Your Task
@@ -37,6 +38,48 @@ If `research/_summary.md` missing:
 1. Run research: /orchestrate-research {task-slug}
 2. Continue without (not recommended)
 ```
+
+## Step 2.5: Check Architecture (NEW)
+
+Read `research/_plan.md` Section 8 (Complexity Assessment).
+
+**If complexity score >= 5:**
+
+Check if `architecture.md` exists in task directory:
+
+- **If missing:**
+```
+⚠️ Architecture required but not found.
+
+Complexity score: {score} (threshold: 5)
+This task requires architectural decision.
+
+Options:
+1. Run architecture: /orchestrate-architecture {task-slug}
+2. Skip architecture (not recommended)
+```
+
+- **If exists but task.md shows arch-review or arch-iteration:**
+```
+⚠️ Architecture pending review.
+
+Run /orchestrate-architecture {task-slug} to continue review.
+```
+
+- **If task.md shows arch-escalated:**
+```
+⚠️ Architecture escalated (max iterations reached).
+
+Run /orchestrate-architecture {task-slug} to resolve:
+- Provide manual requirements
+- Skip architecture
+- Abandon task
+```
+
+- **If exists and approved:** Proceed to Step 3.
+
+**If complexity score < 5:**
+Proceed to Step 3 (architecture optional).
 
 ## Step 3: Check Current Status
 
@@ -63,6 +106,7 @@ Write `plan/plan.md`:
 Created: {timestamp}
 Status: draft
 Based on: research/_summary.md
+Architecture: {../architecture.md (approved) | not required | skipped}
 
 ## Overview
 [What and why]
