@@ -2,7 +2,7 @@
 
 Phase 2: Create detailed implementation plan and decompose into tasks.
 
-**IMPORTANT:** First read `.claude/orchestrator-rules.md` for critical orchestration rules.
+**IMPORTANT:** First read `~/.claude/orchestrator-rules.md` for critical orchestration rules.
 
 ---
 

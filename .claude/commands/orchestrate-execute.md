@@ -2,7 +2,7 @@
 
 Phase 3: Execute the plan through specialized agents.
 
-**IMPORTANT:** First read `.claude/orchestrator-rules.md` for critical orchestration rules.
+**IMPORTANT:** First read `~/.claude/orchestrator-rules.md` for critical orchestration rules.
 
 ---
 

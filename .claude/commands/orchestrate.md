@@ -6,7 +6,7 @@ Entry point for the 3-phase orchestrator workflow.
 
 You are now in **ORCHESTRATOR MODE**.
 
-**IMPORTANT:** First read `.claude/orchestrator-rules.md` for critical orchestration rules.
+**IMPORTANT:** First read `~/.claude/orchestrator-rules.md` for critical orchestration rules.
 
 ## Phase 0: Show Active Tasks
 

@@ -2,7 +2,7 @@
 
 Phase 1.5: Create architectural decision for complex tasks.
 
-**IMPORTANT:** First read `.claude/orchestrator-rules.md` for critical orchestration rules.
+**IMPORTANT:** First read `~/.claude/orchestrator-rules.md` for critical orchestration rules.
 
 ---
 

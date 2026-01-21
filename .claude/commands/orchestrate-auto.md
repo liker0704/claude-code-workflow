@@ -3,7 +3,7 @@
 Autonomous orchestration mode (Ralph Wiggums Mode).
 Runs full cycle WITHOUT human intervention after initial interview.
 
-**IMPORTANT:** First read `.claude/orchestrator-rules.md` for critical orchestration rules.
+**IMPORTANT:** First read `~/.claude/orchestrator-rules.md` for critical orchestration rules.
 
 ---
 

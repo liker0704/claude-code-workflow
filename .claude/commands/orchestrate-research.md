@@ -2,7 +2,7 @@
 
 Phase 1: Research the codebase and explore solution options.
 
-**IMPORTANT:** First read `.claude/orchestrator-rules.md` for critical orchestration rules.
+**IMPORTANT:** First read `~/.claude/orchestrator-rules.md` for critical orchestration rules.
 
 ---
 
