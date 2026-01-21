@@ -86,6 +86,42 @@ ERROR_HINTS = {
         "Reduce gap iterations or escalate to user for decision"
     ),
 
+    # _plan.md - Complexity Assessment
+    "missing_complexity_assessment": (
+        "Missing required section: ## 8. Complexity Assessment",
+        "Add '## 8. Complexity Assessment' section with Score and factors table for Architecture gate"
+    ),
+    "missing_complexity_score": (
+        "Missing complexity score",
+        "Add '**Score:** N (threshold: 5)' in Complexity Assessment section"
+    ),
+    "invalid_complexity_score": (
+        "Complexity score must be a number, got '{score}'",
+        "Fix '**Score:**' to contain a valid number (e.g., '**Score:** 7 (threshold: 5)')"
+    ),
+
+    # _summary.md
+    "missing_key_findings": (
+        "Missing required section: ## Key Findings",
+        "Add '## Key Findings' section with research discoveries"
+    ),
+    "missing_recommendations": (
+        "Missing required section: ## Recommendations",
+        "Add '## Recommendations' section with actionable suggestions"
+    ),
+    "missing_sources": (
+        "Missing required section: ## Sources",
+        "Add '## Sources' section listing all research sources"
+    ),
+    "no_findings_listed": (
+        "No findings in Key Findings section",
+        "Add at least one finding: '- **Finding:** \"quote\" (Source: file.md)'"
+    ),
+    "finding_no_confidence": (
+        "Findings should have Confidence ratings",
+        "Add '**Confidence:** High/Medium/Low (N%)' after each finding"
+    ),
+
     # architecture.md
     "missing_context": (
         "Missing required section: ## Context",
@@ -293,6 +329,63 @@ def validate_research_plan_md(content: str) -> tuple[bool, list[str]]:
                     max_iter=max_iter
                 ))
 
+    # Check Complexity Assessment (Section 8) - required for Architecture gate
+    if "## 8. Complexity Assessment" not in content:
+        errors.append(format_error_with_hint("missing_complexity_assessment"))
+    else:
+        # Check for Score
+        score_match = re.search(r"\*\*Score:\*\*\s*(\S+)", content)
+        if not score_match:
+            errors.append(format_error_with_hint("missing_complexity_score"))
+        else:
+            score_value = score_match.group(1)
+            # Score should be a number (possibly with decimals)
+            if not re.match(r"^\d+\.?\d*$", score_value):
+                errors.append(format_error_with_hint(
+                    "invalid_complexity_score",
+                    score=score_value
+                ))
+
+    return len(errors) == 0, errors
+
+
+def validate_summary_md(content: str) -> tuple[bool, list[str]]:
+    """Validate research _summary.md structure."""
+    errors = []
+    warnings = []
+
+    # Required sections
+    section_map = {
+        "## Key Findings": "missing_key_findings",
+        "## Recommendations": "missing_recommendations",
+        "## Sources": "missing_sources",
+    }
+
+    for section, error_key in section_map.items():
+        if section not in content:
+            errors.append(format_error_with_hint(error_key))
+
+    # Check Key Findings has at least one finding
+    findings_match = re.search(
+        r"## Key Findings\s*(.*?)(?=\n## |\Z)",
+        content,
+        re.DOTALL
+    )
+    if findings_match:
+        findings_section = findings_match.group(1).strip()
+        # Look for bullet points or numbered findings
+        findings = re.findall(r"[-*\d.]\s+\*\*", findings_section)
+        if len(findings) == 0:
+            errors.append(format_error_with_hint("no_findings_listed"))
+
+        # Check for Confidence ratings (warning, not error)
+        if "**Confidence:**" not in findings_section and "Confidence:" not in findings_section:
+            warnings.append(format_error_with_hint("finding_no_confidence"))
+
+    # Print warnings to stderr (non-blocking)
+    for warning in warnings:
+        print(f"  Warning: {warning}", file=sys.stderr)
+
     return len(errors) == 0, errors
 
 
@@ -402,6 +495,8 @@ def main():
             is_valid, errors = validate_plan_md(content)
         elif filename == "_plan.md":
             is_valid, errors = validate_research_plan_md(content)
+        elif filename == "_summary.md":
+            is_valid, errors = validate_summary_md(content)
         elif filename == "architecture.md":
             is_valid, errors = validate_architecture_md(content)
         else:
