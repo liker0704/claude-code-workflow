@@ -4,14 +4,166 @@ Validator for orchestrate files structure.
 Validates task.md, tasks.md, plan.md, _plan.md, architecture.md when written to tmp/.orchestrate/.
 
 Exit codes:
-  0 - Valid (allow)
-  2 - Invalid (block)
+  0 - Valid (allow or JSON deny output)
+
+Hook output format (on validation failure):
+  JSON with hookSpecificOutput.permissionDecision = "deny" and actionable hints.
 """
 
 import json
 import os
 import re
 import sys
+
+
+# Error messages with actionable hints for AI
+ERROR_HINTS = {
+    # task.md
+    "missing_status": (
+        "Missing required field: Status:",
+        "Add 'Status: initialized' at the top of task.md (valid: initialized, researching, planning, executing, complete, blocked)"
+    ),
+    "missing_created": (
+        "Missing required field: Created:",
+        "Add 'Created: YYYY-MM-DD' field after Status in task.md"
+    ),
+    "missing_last_updated": (
+        "Missing required field: Last-updated:",
+        "Add 'Last-updated: YYYY-MM-DD' field after Created in task.md"
+    ),
+    "invalid_status": (
+        "Invalid status '{status}'",
+        "Change status to one of: {valid_statuses}"
+    ),
+    "missing_phases": (
+        "Missing '## Phases' section",
+        "Add '## Phases' section with checkboxes: Research, Architecture (if needed), Plan, Execute"
+    ),
+
+    # tasks.md
+    "missing_tasks_header": (
+        "Missing tasks header",
+        "Add '# Tasks' or '# Task Breakdown' header at the top of tasks.md"
+    ),
+    "no_task_definitions": (
+        "No task definitions found",
+        "Add at least one task: '## task-01' with description"
+    ),
+
+    # plan.md
+    "missing_plan_status": (
+        "Missing Status field",
+        "Add 'Status: draft' at the top of plan.md"
+    ),
+    "invalid_plan_status": (
+        "Invalid plan status '{status}'",
+        "Change plan status to one of: draft, approved, superseded"
+    ),
+
+    # _plan.md (research)
+    "missing_research_status": (
+        "Missing Status field",
+        "Add 'Status: draft' at the top of _plan.md"
+    ),
+    "invalid_research_status": (
+        "Invalid research plan status '{status}'",
+        "Change research status to one of: draft, approved, executing, complete"
+    ),
+    "missing_research_questions": (
+        "Missing section: ## 2. Research Questions",
+        "Add '## 2. Research Questions' section with questions to answer"
+    ),
+    "missing_concerns_matrix": (
+        "Missing section: ## 4. Concerns Matrix",
+        "Add '## 4. Concerns Matrix' table with Concern | Priority | Resolution columns"
+    ),
+    "missing_gaps_found": (
+        "Missing section: ## 7. Gaps Found",
+        "Add '## 7. Gaps Found' section to track knowledge gaps"
+    ),
+    "gap_iterations_exceeded": (
+        "Gap iterations {current} exceeds max {max_iter}",
+        "Reduce gap iterations or escalate to user for decision"
+    ),
+
+    # architecture.md
+    "missing_context": (
+        "Missing required section: ## Context",
+        "Add '## Context' section explaining the problem and constraints"
+    ),
+    "missing_alternatives": (
+        "Missing required section: ## Alternatives Considered",
+        "Add '## Alternatives Considered' with at least 1 rejected alternative"
+    ),
+    "missing_decision": (
+        "Missing required section: ## Decision",
+        "Add '## Decision' section with **Approach:** and **Rationale:**"
+    ),
+    "missing_components": (
+        "Missing required section: ## Components",
+        "Add '## Components' table: | Action | Path | Purpose |"
+    ),
+    "missing_data_flow": (
+        "Missing required section: ## Data Flow",
+        "Add '## Data Flow' section describing data movement between components"
+    ),
+    "no_alternatives_listed": (
+        "Must list at least 1 alternative",
+        "Add alternatives: '1. **[Name]** — rejected: reason why not chosen'"
+    ),
+    "alternative_no_rejection": (
+        "Alternative '{name}' missing rejection reason",
+        "Add rejection reason: '1. **[{name}]** — rejected: specific reason'"
+    ),
+    "components_empty": (
+        "Components table must have at least 1 row",
+        "Add component rows: '| CREATE | `path/file.ts` | purpose |'"
+    ),
+    "decision_no_approach": (
+        "Decision section missing 'Approach:'",
+        "Add '**Approach:** description of chosen solution' to Decision section"
+    ),
+    "decision_no_rationale": (
+        "Decision section missing 'Rationale:'",
+        "Add '**Rationale:** why this approach was chosen' to Decision section"
+    ),
+}
+
+
+def format_error_with_hint(error_key: str, **kwargs) -> str:
+    """Format error message with actionable hint."""
+    if error_key not in ERROR_HINTS:
+        return f"Validation error: {error_key}"
+
+    error_msg, hint = ERROR_HINTS[error_key]
+
+    # Format with kwargs
+    error_msg = error_msg.format(**kwargs) if kwargs else error_msg
+    hint = hint.format(**kwargs) if kwargs else hint
+
+    return f"{error_msg}\n   → FIX: {hint}"
+
+
+def output_deny(filename: str, errors: list[str]) -> None:
+    """Output JSON deny response with actionable hints."""
+    error_list = "\n".join(f"• {err}" for err in errors)
+
+    message = (
+        f"BLOCKED by validate-orchestrate-files.py\n\n"
+        f"File: {filename}\n\n"
+        f"Errors:\n{error_list}\n\n"
+        f"Fix the errors above and retry writing the file."
+    )
+
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": message,
+        }
+    }
+
+    print(json.dumps(output))
 
 
 def get_hook_input():
@@ -35,25 +187,34 @@ def validate_task_md(content: str) -> tuple[bool, list[str]]:
     """Validate task.md structure."""
     errors = []
 
-    required_fields = ["Status:", "Created:", "Last-updated:"]
-    for field in required_fields:
-        if field not in content:
-            errors.append(f"Missing required field: {field}")
-
     valid_statuses = [
         "initialized", "researching", "research-complete",
-        "architecting", "arch-review", "arch-iteration", "arch-escalated",  # Architecture phase
+        "architecting", "arch-review", "arch-iteration", "arch-escalated",
         "planning", "plan-complete", "executing", "complete",
         "blocked", "abandoned", "cancelled"
     ]
-    status_match = re.search(r"Status:\s*(\S+)", content)
-    if status_match:
-        status = status_match.group(1)
-        if status not in valid_statuses:
-            errors.append(f"Invalid status '{status}'. Expected one of: {', '.join(valid_statuses)}")
+
+    if "Status:" not in content:
+        errors.append(format_error_with_hint("missing_status"))
+    else:
+        status_match = re.search(r"Status:\s*(\S+)", content)
+        if status_match:
+            status = status_match.group(1)
+            if status not in valid_statuses:
+                errors.append(format_error_with_hint(
+                    "invalid_status",
+                    status=status,
+                    valid_statuses=", ".join(valid_statuses)
+                ))
+
+    if "Created:" not in content:
+        errors.append(format_error_with_hint("missing_created"))
+
+    if "Last-updated:" not in content:
+        errors.append(format_error_with_hint("missing_last_updated"))
 
     if "## Phases" not in content:
-        errors.append("Missing '## Phases' section")
+        errors.append(format_error_with_hint("missing_phases"))
 
     return len(errors) == 0, errors
 
@@ -63,11 +224,10 @@ def validate_tasks_md(content: str) -> tuple[bool, list[str]]:
     errors = []
 
     if "# Tasks" not in content and "# Task Breakdown" not in content:
-        errors.append("Missing tasks header")
+        errors.append(format_error_with_hint("missing_tasks_header"))
 
-    # Check for at least one task definition
     if not re.search(r"##\s+task-\d+", content, re.IGNORECASE):
-        errors.append("No task definitions found (expected: ## task-XX)")
+        errors.append(format_error_with_hint("no_task_definitions"))
 
     return len(errors) == 0, errors
 
@@ -76,15 +236,19 @@ def validate_plan_md(content: str) -> tuple[bool, list[str]]:
     """Validate plan.md structure."""
     errors = []
 
-    if "Status:" not in content:
-        errors.append("Missing Status field")
-
     valid_statuses = ["draft", "approved", "superseded"]
-    status_match = re.search(r"Status:\s*(\S+)", content)
-    if status_match:
-        status = status_match.group(1)
-        if status not in valid_statuses:
-            errors.append(f"Invalid plan status '{status}'. Expected: {', '.join(valid_statuses)}")
+
+    if "Status:" not in content:
+        errors.append(format_error_with_hint("missing_plan_status"))
+    else:
+        status_match = re.search(r"Status:\s*(\S+)", content)
+        if status_match:
+            status = status_match.group(1)
+            if status not in valid_statuses:
+                errors.append(format_error_with_hint(
+                    "invalid_plan_status",
+                    status=status
+                ))
 
     return len(errors) == 0, errors
 
@@ -93,21 +257,29 @@ def validate_research_plan_md(content: str) -> tuple[bool, list[str]]:
     """Validate research _plan.md structure."""
     errors = []
 
-    if "Status:" not in content:
-        errors.append("Missing Status field")
-
     valid_statuses = ["draft", "approved", "executing", "complete"]
-    status_match = re.search(r"Status:\s*(\S+)", content)
-    if status_match:
-        status = status_match.group(1)
-        if status not in valid_statuses:
-            errors.append(f"Invalid research plan status '{status}'. Expected: {', '.join(valid_statuses)}")
+
+    if "Status:" not in content:
+        errors.append(format_error_with_hint("missing_research_status"))
+    else:
+        status_match = re.search(r"Status:\s*(\S+)", content)
+        if status_match:
+            status = status_match.group(1)
+            if status not in valid_statuses:
+                errors.append(format_error_with_hint(
+                    "invalid_research_status",
+                    status=status
+                ))
 
     # Check for required sections
-    required_sections = ["## 2. Research Questions", "## 4. Concerns Matrix", "## 7. Gaps Found"]
-    for section in required_sections:
+    section_map = {
+        "## 2. Research Questions": "missing_research_questions",
+        "## 4. Concerns Matrix": "missing_concerns_matrix",
+        "## 7. Gaps Found": "missing_gaps_found",
+    }
+    for section, error_key in section_map.items():
         if section not in content:
-            errors.append(f"Missing section: {section}")
+            errors.append(format_error_with_hint(error_key))
 
     # Check gap iterations format
     if "**Gap iterations:**" in content:
@@ -115,7 +287,11 @@ def validate_research_plan_md(content: str) -> tuple[bool, list[str]]:
         if gap_match:
             current, max_iter = int(gap_match.group(1)), int(gap_match.group(2))
             if current > max_iter:
-                errors.append(f"Gap iterations {current} exceeds max {max_iter}")
+                errors.append(format_error_with_hint(
+                    "gap_iterations_exceeded",
+                    current=current,
+                    max_iter=max_iter
+                ))
 
     return len(errors) == 0, errors
 
@@ -126,17 +302,17 @@ def validate_architecture_md(content: str) -> tuple[bool, list[str]]:
     warnings = []
 
     # Required sections for lightweight ADR
-    required_sections = [
-        "## Context",
-        "## Alternatives Considered",
-        "## Decision",
-        "## Components",
-        "## Data Flow"
-    ]
+    section_map = {
+        "## Context": "missing_context",
+        "## Alternatives Considered": "missing_alternatives",
+        "## Decision": "missing_decision",
+        "## Components": "missing_components",
+        "## Data Flow": "missing_data_flow",
+    }
 
-    for section in required_sections:
+    for section, error_key in section_map.items():
         if section not in content:
-            errors.append(f"Missing required section: {section}")
+            errors.append(format_error_with_hint(error_key))
 
     # Check Alternatives section has at least 1 alternative with rejection reason
     alt_section_match = re.search(
@@ -153,13 +329,16 @@ def validate_architecture_md(content: str) -> tuple[bool, list[str]]:
             re.IGNORECASE
         )
         if len(alternatives) < 1:
-            errors.append("Must list at least 1 alternative in '## Alternatives Considered'")
+            errors.append(format_error_with_hint("no_alternatives_listed"))
         else:
             for name, keyword, reason in alternatives:
                 if not keyword:
                     warnings.append(f"Alternative '{name}' missing 'rejected:' keyword")
                 if not reason.strip():
-                    errors.append(f"Alternative '{name}' missing rejection reason")
+                    errors.append(format_error_with_hint(
+                        "alternative_no_rejection",
+                        name=name
+                    ))
 
     # Check Components table has at least 1 row
     components_match = re.search(
@@ -169,14 +348,13 @@ def validate_architecture_md(content: str) -> tuple[bool, list[str]]:
     )
     if components_match:
         components_section = components_match.group(1)
-        # Look for table rows: | CREATE/MODIFY | `path` | purpose |
         component_rows = re.findall(
             r'\|\s*(CREATE|MODIFY|DELETE)\s*\|',
             components_section,
             re.IGNORECASE
         )
         if len(component_rows) == 0:
-            errors.append("Components table must have at least 1 row (CREATE/MODIFY/DELETE)")
+            errors.append(format_error_with_hint("components_empty"))
 
     # Check Decision section has Approach and Rationale
     decision_match = re.search(
@@ -187,11 +365,11 @@ def validate_architecture_md(content: str) -> tuple[bool, list[str]]:
     if decision_match:
         decision_section = decision_match.group(1)
         if "**Approach:**" not in decision_section and "Approach:" not in decision_section:
-            errors.append("Decision section missing 'Approach:'")
+            errors.append(format_error_with_hint("decision_no_approach"))
         if "**Rationale:**" not in decision_section and "Rationale:" not in decision_section:
-            errors.append("Decision section missing 'Rationale:'")
+            errors.append(format_error_with_hint("decision_no_rationale"))
 
-    # Print warnings (non-blocking)
+    # Print warnings (non-blocking) to stderr
     for warning in warnings:
         print(f"  Warning: {warning}", file=sys.stderr)
 
@@ -231,10 +409,9 @@ def main():
             sys.exit(0)
 
         if not is_valid:
-            print(f"Orchestrate file validation failed for {filename}:")
-            for error in errors:
-                print(f"  - {error}")
-            sys.exit(2)  # Block
+            # Output JSON deny with actionable hints for AI
+            output_deny(filename, errors)
+            sys.exit(0)  # Exit 0, Claude reads JSON for deny
 
         sys.exit(0)  # Allow
 

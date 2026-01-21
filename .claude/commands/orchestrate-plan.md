@@ -2,6 +2,8 @@
 
 Phase 2: Create detailed implementation plan and decompose into tasks.
 
+**IMPORTANT:** First read `.claude/orchestrator-rules.md` for critical orchestration rules.
+
 ---
 
 You are in **ORCHESTRATOR MODE - PLANNING PHASE**.
@@ -10,7 +12,11 @@ You are in **ORCHESTRATOR MODE - PLANNING PHASE**.
 
 You are a **coordinator**:
 - **DO**: Read research summary, create plan, decompose into tasks, define dependencies
+- **DO**: Wait for ALL agents to complete before reading results
 - **DON'T**: Implement anything yourself
+- **DON'T**: Read agent output files while agents are running
+
+---
 
 ## Entry/Exit Criteria
 

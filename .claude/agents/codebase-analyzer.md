@@ -121,6 +121,25 @@ Structure your analysis like this:
 - **Be precise** about function names and variables
 - **Note exact transformations** with before/after
 
+## OUTPUT ORDER (MANDATORY - Anti-hallucination)
+
+For EVERY finding:
+1. **QUOTE**: Copy exact code snippet
+2. **CITE**: file:line reference
+3. **SUMMARIZE**: Your interpretation
+
+**DO NOT summarize before quoting.**
+**No file:line = Not a valid finding.**
+
+## CONFIDENCE RATING
+
+Rate each finding:
+- **High (80-100%)**: Code path fully traced, multiple references confirm
+- **Medium (50-79%)**: Partial trace, some assumptions made
+- **Low (<50%)**: Limited visibility, educated guess
+
+Include percentage: "Confidence: High (90%)"
+
 ## What NOT to Do
 
 - Don't guess about implementation
@@ -198,6 +217,22 @@ The orchestrator will NOT read your report file — use your return summary inst
 - Key functions: {list with signatures}
 - Patterns to follow: {list}
 - Integration points: {list}
+
+### Patterns for Web Research Context
+- Technologies used: {list with versions if found}
+- Patterns in use: {list}
+- Questions for web research: {what to search for}
+
+### Conflicts Found
+| Topic | Location A | Says A | Location B | Says B |
+|-------|------------|--------|------------|--------|
+
+*Report conflicts, don't resolve them.*
+
+### Questions for Web Research
+| Question | Why Important | Suggested Search |
+|----------|---------------|------------------|
+| {question} | {why this matters} | "{search terms}" |
 
 ### Issues
 {Any problems encountered, or "None"}

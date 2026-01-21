@@ -2,6 +2,8 @@
 
 Phase 1.5: Create architectural decision for complex tasks.
 
+**IMPORTANT:** First read `.claude/orchestrator-rules.md` for critical orchestration rules.
+
 ---
 
 You are in **ORCHESTRATOR MODE - ARCHITECTURE PHASE**.
@@ -9,10 +11,15 @@ You are in **ORCHESTRATOR MODE - ARCHITECTURE PHASE**.
 ## Your Role
 
 You are a **coordinator**:
-- **DO**: Analyze research findings, generate ADR, present for human review
+- **DO**: Delegate architecture creation to architect agent
 - **DO**: Iterate based on feedback (max 3 iterations)
+- **DO**: Wait for architect agent to complete before reading results
+- **DON'T**: Generate architecture yourself (delegate to architect agent)
 - **DON'T**: Skip human approval
 - **DON'T**: Proceed to Plan without approved architecture
+- **DON'T**: Read agent output files while agents are running
+
+---
 
 ## Entry/Exit Criteria
 
@@ -88,56 +95,141 @@ architecture:
   max_iterations: 3
 ```
 
-## Step 5: Generate Architecture
+## Step 5: Spawn Architect Agent
 
-Read `research/_summary.md` for: recommended approach, files to modify, patterns.
+**DO NOT generate architecture yourself. Delegate to architect agent.**
 
-Create `architecture.md` in task directory:
+```yaml
+Tool: Task
+Parameters:
+  subagent_type: "architect"
+  prompt: |
+    ## ARCHITECTURE TASK
 
-```markdown
-# Architecture: {task name}
+    Task: {task description}
+    Task slug: {task-slug}
 
-Task: {task-slug}
-Date: {YYYY-MM-DD}
+    ## CONTEXT FROM RESEARCH
 
----
+    {Content of research/_summary.md}
 
-## Context
+    Key findings:
+    - {finding 1}
+    - {finding 2}
 
-{2-3 sentences from research findings: what we're doing and why}
+    Recommended approach from research: {approach}
 
-## Alternatives Considered
+    ## YOUR MISSION
 
-1. **[Alternative A]** — rejected: {reason in 1 sentence}
-2. **[Alternative B]** — rejected: {reason in 1 sentence}
+    Create architecture decision document for this task.
 
-## Decision
+    Output file: tmp/.orchestrate/{task-slug}/architecture.md
 
-**Approach:** {Chosen approach in 1-2 sentences}
+    ## REQUIREMENTS
 
-**Rationale:** {Why this approach, 2-3 sentences}
+    1. Quote research findings when making decisions:
+       "Research found: '{exact quote}' (source: research/_summary.md)"
 
-**Trade-offs:**
-- (+) {Benefit 1}
-- (+) {Benefit 2}
-- (-) {Drawback / accepted limitation}
+    2. Consider at least 2 alternatives before deciding
 
-## Components
+    3. Rate confidence for each decision:
+       - High: Multiple research sources agree
+       - Medium: Single source or some uncertainty
+       - Low: Limited research, needs validation
 
-| Action | File | Purpose |
-|--------|------|---------|
-| CREATE | `src/path/to/new.ts` | {What it does} |
-| MODIFY | `src/path/to/existing.ts` | {What changes} |
+    ## OUTPUT FORMAT
 
-## Data Flow
+    Write to: tmp/.orchestrate/{task-slug}/architecture.md
+
+    ```markdown
+    # Architecture: {task name}
+
+    Task: {task-slug}
+    Date: {YYYY-MM-DD}
+
+    ---
+
+    ## Context
+
+    {2-3 sentences from research findings: what we're doing and why}
+
+    **Research basis:** "{quote from research}" (source: research/_summary.md)
+
+    ## Alternatives Considered
+
+    1. **[Alternative A]** — rejected: {reason in 1 sentence}
+    2. **[Alternative B]** — rejected: {reason in 1 sentence}
+
+    ## Decision
+
+    **Approach:** {Chosen approach in 1-2 sentences}
+
+    **Rationale:** {Why this approach, 2-3 sentences}
+    **Confidence:** {High/Medium/Low} — {why}
+
+    **Trade-offs:**
+    - (+) {Benefit 1}
+    - (+) {Benefit 2}
+    - (-) {Drawback / accepted limitation}
+
+    ## Components
+
+    | Action | File | Purpose |
+    |--------|------|---------|
+    | CREATE | `src/path/to/new.ts` | {What it does} |
+    | MODIFY | `src/path/to/existing.ts` | {What changes} |
+
+    ## Data Flow
+
+    ```
+    {Input} → {Component A} → {Component B} → {Output}
+    ```
+
+    ---
+
+    *Requires human review before proceeding to Plan Phase.*
+    ```
+
+    ## VALIDATION (before finishing)
+
+    - [ ] Context explains problem clearly
+    - [ ] Research findings are quoted, not paraphrased
+    - [ ] At least 2 alternatives considered
+    - [ ] Decision has clear rationale with confidence
+    - [ ] Components table lists all files
+    - [ ] Data flow shows architecture
+
+  description: "Architect: design for {task-slug}"
+```
+
+### Wait for Architect Agent
 
 ```
-{Input} → {Component A} → {Component B} → {Output}
+TaskOutput(architect-task-id, block=true) → wait until complete
 ```
 
----
+### Validate Architecture Output
 
-*Requires human review before proceeding to Plan Phase.*
+After architect agent completes:
+
+1. Read `architecture.md`
+2. Validate required sections exist:
+   - `## Context` (non-empty, has research quote)
+   - `## Alternatives Considered` (at least 1)
+   - `## Decision` (has Approach, Rationale, Confidence)
+   - `## Components` (has at least 1 row)
+   - `## Data Flow` (non-empty)
+
+3. If validation fails:
+```
+⚠️ Architecture validation failed
+
+Missing: {what's missing}
+
+Options:
+1. [Retry] Ask architect to fix
+2. [Manual] Edit architecture.md manually
+3. [Skip] Proceed without full architecture
 ```
 
 ## Step 6: Present for Review

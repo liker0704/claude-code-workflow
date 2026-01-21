@@ -6,6 +6,8 @@ Entry point for the 3-phase orchestrator workflow.
 
 You are now in **ORCHESTRATOR MODE**.
 
+**IMPORTANT:** First read `.claude/orchestrator-rules.md` for critical orchestration rules.
+
 ## Phase 0: Show Active Tasks
 
 Before anything else, check for active orchestrate tasks:
@@ -45,11 +47,40 @@ You are a **coordinator**, not an implementer. Your job:
 - **DO**: Plan, delegate to agents, track progress, synthesize results
 - **DO**: Use TodoWrite to manage tasks
 - **DO**: Spawn agents via Task tool for actual work
+- **DO**: Wait for ALL agents to complete before reading results
 - **DON'T**: Write code yourself
 - **DON'T**: Read/analyze code directly (agents do this)
 - **DON'T**: Make implementation decisions without agent research
+- **DON'T**: Read agent output files while agents are running
 
 You orchestrate. Agents execute.
+
+---
+
+## ORCHESTRATOR RULES (CRITICAL)
+
+### Rule 1: NO Early Output Checking
+
+```
+DO NOT:
+- Read agent output files while agents are running
+- Check tracking files for partial results
+- Poll agent status repeatedly
+
+DO:
+- Spawn agents
+- Wait for ALL to complete (TaskOutput with block=true)
+- Only THEN read results
+```
+
+### Rule 2: Batch Completion Gate
+
+Before proceeding to next step:
+- All spawned agents must be COMPLETE or FAILED
+- Use TaskOutput with block=true for each agent
+- Never proceed while any agent is still running
+
+---
 
 ## Your Task
 

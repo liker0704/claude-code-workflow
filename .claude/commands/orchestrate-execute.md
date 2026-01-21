@@ -2,6 +2,8 @@
 
 Phase 3: Execute the plan through specialized agents.
 
+**IMPORTANT:** First read `.claude/orchestrator-rules.md` for critical orchestration rules.
+
 ---
 
 You are in **ORCHESTRATOR MODE - EXECUTION PHASE**.
@@ -10,7 +12,11 @@ You are in **ORCHESTRATOR MODE - EXECUTION PHASE**.
 
 You are a **coordinator**:
 - **DO**: Spawn implementer/tester/reviewer agents, track progress, pass context between tasks
-- **DON'T**: Write code yourself, read agent report files unless fallback needed
+- **DO**: Wait for ALL agents to complete before proceeding to next phase
+- **DON'T**: Write code yourself
+- **DON'T**: Read agent output files while agents are running
+
+---
 
 ## Entry/Exit Criteria
 
@@ -67,43 +73,65 @@ Parameters:
 
 **NEEDS_CHANGES:** Fix → re-test → re-review. DO NOT proceed until APPROVED.
 
-### Batch-Level Review
+### Batch-Level Review (ALWAYS FULL)
 
-After all tasks in batch complete:
+After ALL tasks in batch complete, run FULL review.
 
-**Mode Selection:**
-- LIGHT: All tasks low risk → git diff + summaries only
-- DEEP: Any high/medium risk OR conflict detected → full report reading
+**No light/deep modes. Always comprehensive review.**
 
 **Conflict Detection (before review):**
 ```
 Collect modified files from each task
-If same file modified by 2+ tasks → force DEEP mode
+If same file modified by 2+ tasks → flag for reviewer
 ```
 
 ```yaml
-# LIGHT
 Tool: Task
 Parameters:
   subagent_type: "reviewer"
   prompt: |
-    Batch {N} light review: git diff, check for conflicts, verify tests pass
-    Verdict: APPROVED | NEEDS_DEEP_REVIEW
-  description: "Light review batch {N}"
+    ## BATCH REVIEW: Batch {N}
 
-# DEEP
-Tool: Task
-Parameters:
-  subagent_type: "reviewer"
-  prompt: |
-    Batch {N} deep review: Read all reports in execution/
-    Check: integration, conflicts, architecture, security
-    Output to: execution/batch-{N}-review.md
-    Verdict: APPROVED | NEEDS_CHANGES | BLOCKED
-  description: "Deep review batch {N}"
+    Task: {task-slug}
+    Tasks in batch: {list of task-XX}
+
+    ## REVIEW SCOPE
+
+    Review ALL changes from this batch:
+
+    1. Read task reports: execution/task-{XX}-*.md
+    2. Run: git diff HEAD~{batch_commits}
+    3. Check integration between tasks in batch
+    4. Check consistency with architecture.md (if exists)
+
+    ## CHECKLIST
+
+    - [ ] All tasks completed successfully
+    - [ ] Tests pass after batch
+    - [ ] No conflicts between tasks
+    - [ ] Code follows project patterns
+    - [ ] No security issues introduced
+    - [ ] Changes match plan
+
+    ## OUTPUT
+
+    Write to: execution/batch-{N}-review.md
+
+    ### Verdict: APPROVED | NEEDS_CHANGES | BLOCKED
+
+    ### Summary
+    {what was done in this batch}
+
+    ### Issues Found
+    | Issue | Severity | Task | Action |
+    |-------|----------|------|--------|
+
+  description: "Review batch {N}"
 ```
 
-**Batch must be APPROVED before next batch starts.**
+**Batch MUST be APPROVED before next batch starts.**
+**If NEEDS_CHANGES:** Fix issues → re-run batch review.
+**If BLOCKED:** Stop execution, escalate to user.
 
 ## Step 1: Validate Task
 
@@ -351,9 +379,9 @@ Options:
 **Timeout (>10min):** Keep waiting / Check status / Cancel / Mark blocked
 **Agent error:** Retry / Different approach / Escalate / Skip
 
-## FINAL REVIEW (MANDATORY)
+## FINAL REVIEW (MANDATORY - MULTI-AGENT)
 
-When all tasks finish, perform comprehensive final review.
+When all tasks finish, perform comprehensive final review with **4 parallel reviewers**.
 
 ### F1: Generate Summary
 
@@ -374,59 +402,236 @@ npm run build || cargo build || go build ./... || true
 
 **If fails:** Fix before proceeding.
 
-### F3: Holistic Review
+### F3: Spawn 4 Reviewers (PARALLEL)
+
+Spawn ALL 4 reviewers simultaneously:
+
+#### 1. Code Quality Reviewer
 
 ```yaml
 Tool: Task
 Parameters:
   subagent_type: "reviewer"
   prompt: |
-    Final review: {task-slug}
-    Read: task.md, plan.md
+    ## CODE QUALITY REVIEW
+
+    Task: {task-slug}
+
     Run: git diff HEAD~{N}..HEAD
-    Check: requirements coverage, code consistency, integration, quality, tests
-    Output to: execution/_final-review.md
-    Return: requirements X/Y, issues count, verdict APPROVED|NEEDS_CHANGES
-  description: "Final holistic review"
+    Read: plan/plan.md for context
+
+    ## CHECK
+
+    - [ ] Code follows project patterns (check existing code)
+    - [ ] No code duplication (DRY)
+    - [ ] Functions are focused (single responsibility)
+    - [ ] Error handling is consistent
+    - [ ] Tests exist for new code
+    - [ ] Tests are meaningful (not just coverage)
+    - [ ] No TODO/FIXME left without ticket
+    - [ ] No commented-out code
+    - [ ] Naming is clear and consistent
+
+    ## OUTPUT
+
+    Write to: execution/_final-code-quality.md
+
+    ### Verdict: PASS | ISSUES | FAIL
+
+    ### Issues Found
+    | File | Line | Issue | Severity |
+    |------|------|-------|----------|
+
+  run_in_background: true
+  description: "Final review: code quality"
 ```
 
-### F4: Devil's Advocate
+#### 2. Security Reviewer
+
+```yaml
+Tool: Task
+Parameters:
+  subagent_type: "reviewer"
+  prompt: |
+    ## SECURITY REVIEW
+
+    Task: {task-slug}
+
+    Run: git diff HEAD~{N}..HEAD
+    Focus: Security vulnerabilities
+
+    ## CHECK (OWASP Top 10 + common issues)
+
+    - [ ] No SQL injection (parameterized queries?)
+    - [ ] No XSS (output encoding?)
+    - [ ] No secrets in code (API keys, passwords)
+    - [ ] Auth checks on protected routes
+    - [ ] Input validation on user data
+    - [ ] No path traversal vulnerabilities
+    - [ ] No insecure deserialization
+    - [ ] Rate limiting where needed
+    - [ ] Proper error messages (no stack traces to users)
+    - [ ] HTTPS/TLS requirements met
+
+    ## OUTPUT
+
+    Write to: execution/_final-security.md
+
+    ### Verdict: PASS | ISSUES | FAIL
+
+    ### Vulnerabilities Found
+    | File | Line | Vulnerability | Severity | Fix |
+    |------|------|---------------|----------|-----|
+
+  run_in_background: true
+  description: "Final review: security"
+```
+
+#### 3. Requirements Reviewer
+
+```yaml
+Tool: Task
+Parameters:
+  subagent_type: "reviewer"
+  prompt: |
+    ## REQUIREMENTS REVIEW
+
+    Task: {task-slug}
+
+    Read: task.md (original requirements)
+    Read: plan/plan.md (implementation plan)
+    Read: architecture.md (if exists)
+    Run: git diff HEAD~{N}..HEAD
+
+    ## CHECK
+
+    - [ ] All goals from task.md addressed
+    - [ ] All tasks from plan completed
+    - [ ] Architecture decisions followed
+    - [ ] No scope creep (extra stuff not in plan)
+    - [ ] No scope miss (stuff in plan not done)
+    - [ ] Success criteria met
+    - [ ] Edge cases from plan handled
+
+    ## OUTPUT
+
+    Write to: execution/_final-requirements.md
+
+    ### Coverage
+    | Requirement | Status | Evidence |
+    |-------------|--------|----------|
+
+    ### Verdict: COMPLETE | PARTIAL | INCOMPLETE
+
+  run_in_background: true
+  description: "Final review: requirements"
+```
+
+#### 4. Devil's Advocate
 
 ```yaml
 Tool: Task
 Parameters:
   subagent_type: "devil-advocate"
   prompt: |
-    Devil's advocate: {task-slug}
-    Read: task.md, _final-review.md
+    ## DEVIL'S ADVOCATE REVIEW
+
+    Task: {task-slug}
+
     Run: git diff HEAD~{N}..HEAD
-    Find: production issues, security, edge cases, hidden assumptions, failure modes, maintainability
-    Output to: execution/_devils-advocate.md
-    Return: risk level, critical/major concerns, verdict APPROVE_WITH_NOTES|RECOMMEND_CHANGES|BLOCK
-  description: "Devil's advocate final"
+
+    ## YOUR MISSION
+
+    Find problems others might miss. Be critical.
+
+    ## CHECK
+
+    - What can break in production?
+    - What edge cases are missed?
+    - What assumptions are wrong?
+    - What happens under load?
+    - What happens with bad/malicious input?
+    - What happens if external service fails?
+    - What's the worst case scenario?
+    - Hidden dependencies?
+    - Technical debt introduced?
+
+    ## OUTPUT
+
+    Write to: execution/_final-devils-advocate.md
+
+    ### Risk Level: LOW | MEDIUM | HIGH | CRITICAL
+
+    ### Concerns
+    | Concern | Severity | Likelihood | Impact |
+    |---------|----------|------------|--------|
+
+    ### Verdict: APPROVE_WITH_NOTES | RECOMMEND_CHANGES | BLOCK
+
+  run_in_background: true
+  description: "Final review: devil's advocate"
 ```
 
-### F5: Present to User
+### F4: Wait for All Reviewers
 
 ```
-FINAL REVIEW COMPLETE
+1. TaskOutput(code-quality, block=true) → wait
+2. TaskOutput(security, block=true) → wait
+3. TaskOutput(requirements, block=true) → wait
+4. TaskOutput(devils-advocate, block=true) → wait
+5. ALL done → read all reports
+```
+
+### F5: Aggregate Results
+
+Read all `_final-*.md` files and aggregate:
+
+| Reviewer | Verdict | Critical Issues |
+|----------|---------|-----------------|
+| Code Quality | {PASS/ISSUES/FAIL} | {count} |
+| Security | {PASS/ISSUES/FAIL} | {count} |
+| Requirements | {COMPLETE/PARTIAL/INCOMPLETE} | {count} |
+| Devil's Advocate | {APPROVE/RECOMMEND_CHANGES/BLOCK} | {count} |
+
+### F6: Present to User
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FINAL MULTI-AGENT REVIEW COMPLETE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Task: {task-slug}
 Tasks: {N}/{N}, Files: {X}, Lines: +{add} -{rem}
 
 Verification: Tests ✅ | Types ✅ | Lint ✅ | Build ✅
-Holistic Review: {verdict}
-Devil's Advocate: Risk {level}
 
-Review: git diff HEAD~{N}..HEAD
-Reports: execution/_final-*.md
+### Review Results
+| Reviewer | Verdict | Issues |
+|----------|---------|--------|
+| Code Quality | ✅ PASS | 0 |
+| Security | ⚠️ ISSUES | 2 minor |
+| Requirements | ✅ COMPLETE | 0 |
+| Devil's Advocate | ⚠️ CONCERNS | 1 edge case |
 
-[Complete] Approve | [Fix] Address concerns | [Revert] Undo
+### Action Required
+{List any issues that need attention}
+
+### Reports
+- execution/_final-code-quality.md
+- execution/_final-security.md
+- execution/_final-requirements.md
+- execution/_final-devils-advocate.md
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[Complete] Approve and finish
+[Fix] Address issues first
+[Revert] Undo all changes
 ```
 
 **WAIT FOR USER APPROVAL.**
 
-### F6: On Approval
+### F7: On Approval
 
 Update `task.md` to `Status: complete`, mark `[x] Execute`
 

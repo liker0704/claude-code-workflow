@@ -2,6 +2,8 @@
 
 Phase 1: Research the codebase and explore solution options.
 
+**IMPORTANT:** First read `.claude/orchestrator-rules.md` for critical orchestration rules.
+
 ---
 
 You are in **ORCHESTRATOR MODE - RESEARCH PHASE**.
@@ -11,8 +13,12 @@ You are in **ORCHESTRATOR MODE - RESEARCH PHASE**.
 You are a **coordinator**:
 - **DO**: Use Scout for scope analysis, create formal research plan, spawn agents per plan
 - **DO**: Scale agent count based on task complexity
+- **DO**: Run codebase analysis FIRST, then web research with context
 - **DON'T**: Read code yourself, use agent return summaries
 - **DON'T**: Skip user approval of research plan
+- **DON'T**: Read agent output files while agents are running
+
+---
 
 ## Entry/Exit Criteria
 
@@ -55,6 +61,7 @@ Parameters:
     2. Affected areas (directories, file patterns)
     3. Key concerns (security, performance, patterns, etc.)
     4. Research questions to answer before implementation
+    5. Task complexity rating (1-5)
 
     ### Output Format
 
@@ -81,6 +88,24 @@ Parameters:
     ## Research Questions
     | ID | Question | Priority |
     |----|----------|----------|
+
+    ## Complexity Rating
+
+    | Rating | Description |
+    |--------|-------------|
+    | 1 | Single file, obvious solution |
+    | 2 | Few files, clear approach |
+    | 3 | Multiple components, some options |
+    | 4 | Cross-cutting, architectural decisions |
+    | 5 | Unique system, no clear precedent |
+
+    **This task: {1-5}**
+    **Justification:** {why this rating}
+
+    **Web Research Agents** (based on complexity):
+    - Complexity 1-2: web-official-docs, web-community
+    - Complexity 3: + web-issues
+    - Complexity 4-5: + web-academic, web-similar-systems
 
     ## Recommended Agents
     ### Agent N: {focus}
@@ -246,9 +271,31 @@ Full plan: research/_plan.md
 
 ---
 
-## Step 7: Spawn Research Agents
+## Step 7: Spawn Research Agents (TWO PHASES)
 
 Update `task.md` to `Status: researching`, `_plan.md` to `Status: executing`.
+
+### Research Flow (CRITICAL)
+
+```
+PHASE 1: CODEBASE ANALYSIS
+├── Spawn all codebase agents (parallel)
+├── Wait for ALL to complete
+├── Collect: patterns, concerns, questions for web research
+└── Output: Context for targeted web search
+
+PHASE 2: WEB RESEARCH (after codebase complete)
+├── Use codebase findings as context
+├── Spawn web agents based on complexity rating
+│   ├── Complexity 1-2: web-official-docs, web-community
+│   ├── Complexity 3: + web-issues
+│   └── Complexity 4-5: + web-academic, web-similar-systems
+├── Wait for ALL to complete
+└── Output: External knowledge with sources
+```
+
+**IMPORTANT**: Web research receives context from codebase analysis.
+This makes web searches TARGETED instead of generic.
 
 ### Agent Prompt Template
 
@@ -269,12 +316,24 @@ Every agent MUST receive:
 ### NOT IN SCOPE
 - {exclusions with reasons}
 
-## CHAIN-OF-VERIFICATION
+## OUTPUT ORDER (MANDATORY - Anti-hallucination)
 
 For EVERY finding:
-1. What file:line proves this?
-2. Copy exact code as evidence
-3. Rate confidence: High / Medium / Low
+1. **QUOTE**: "Exact text or code from source"
+2. **CITE**: file:line OR URL
+3. **SUMMARIZE**: Your interpretation
+
+**DO NOT summarize before quoting.**
+**No quote/cite = Not a valid finding.**
+
+## CONFIDENCE RATING
+
+Rate each finding:
+- **High (80-100%)**: Multiple sources agree, official docs confirm
+- **Medium (50-79%)**: Single authoritative source, or minor conflicts
+- **Low (<50%)**: Limited sources, or significant uncertainty
+
+Include percentage: "Confidence: High (85%)"
 
 ## COMPLETENESS CHECKLIST
 
@@ -328,16 +387,150 @@ Before finishing:
 ## Gaps Identified
 - {what was missed, may be in other location}
 
+## Conflicts Found
+
+If you find contradicting information:
+
+| Topic | Source A | Claim A | Source B | Claim B |
+|-------|----------|---------|----------|---------|
+
+**Do NOT resolve conflicts yourself. Report them for orchestrator.**
+
+## New Questions Discovered
+
+| Question | Why Important | Suggested Agent |
+|----------|---------------|-----------------|
+
 ## Context for Other Agents
 - {useful info for dependent agents}
 ```
 
-### Spawn Parallel
+### Phase 1: Spawn Codebase Agents
 
-Spawn all agents from _plan.md in parallel with `run_in_background: true`.
+Spawn all codebase agents from _plan.md in parallel with `run_in_background: true`.
 Save to `research/_agents.json`:
 ```json
-{"agents": [{"id": "xxx", "agent_id": "analyzer-1", "status": "running"}]}
+{"phase": "codebase", "agents": [{"id": "xxx", "type": "codebase-analyzer", "status": "running"}]}
+```
+
+**Wait for ALL codebase agents to complete before Phase 2.**
+
+### Phase 2: Spawn Web Research Agents
+
+After codebase phase complete, spawn web agents with context.
+
+**Select agents based on complexity rating from Scout:**
+
+| Complexity | Web Agents |
+|------------|------------|
+| 1-2 | web-official-docs, web-community |
+| 3 | + web-issues |
+| 4-5 | + web-academic, web-similar-systems |
+
+**Web Agent Prompt Template:**
+
+```yaml
+Tool: Task
+Parameters:
+  subagent_type: "web-official-docs"  # or web-community, web-issues, etc.
+  prompt: |
+    ## WEB RESEARCH MISSION
+
+    Task: {task description}
+
+    ## CONTEXT FROM CODEBASE ANALYSIS
+
+    {Summary of codebase findings:}
+    - Current patterns: {from codebase agents}
+    - Technologies used: {from codebase agents}
+    - Specific questions: {from codebase agents}
+
+    ## YOUR FOCUS
+
+    {agent-specific focus}
+
+    ## OUTPUT ORDER (MANDATORY)
+
+    For EVERY finding:
+    1. QUOTE: "Exact text from source"
+    2. CITE: URL (required)
+    3. SUMMARIZE: Your interpretation
+
+    No URL = Not a valid finding.
+
+    ## CONFIDENCE RATING
+
+    Rate each finding: High (80-100%) | Medium (50-79%) | Low (<50%)
+
+    ## OUTPUT FORMAT
+
+    # Web Research Report: {agent-type}
+
+    **Focus**: {focus}
+    **Status**: COMPLETE | PARTIAL
+
+    ## Findings
+
+    ### Finding N: {title}
+    **Quote**: "{exact text}"
+    **Source**: {URL}
+    **Confidence**: {rating}
+    **Relevance to codebase**: {how it applies}
+
+    ## Sources
+    | URL | Type | Reliability |
+    |-----|------|-------------|
+
+    ## Conflicts with Codebase
+    | Topic | Codebase says | Web says | Resolution needed |
+    |-------|---------------|----------|-------------------|
+
+  description: "Web research: {focus}"
+```
+
+Update `_agents.json`:
+```json
+{"phase": "web", "agents": [...]}
+```
+
+---
+
+## Step 7.5: Output Validation
+
+Before proceeding to Track Progress, validate agent outputs.
+
+### For Codebase Agents
+
+```python
+def validate_codebase_output(output):
+    has_references = "file:" in output or ":line" in output or ".ts:" in output or ".py:" in output
+    has_findings = "## Findings" in output or "## Key Findings" in output
+    has_status = "COMPLETE" in output or "PARTIAL" in output or "BLOCKED" in output
+    return has_references and has_findings and has_status
+```
+
+### For Web Agents
+
+```python
+def validate_web_output(output):
+    has_urls = "http://" in output or "https://" in output
+    has_sources = "## Sources" in output or "Source:" in output
+    has_confidence = "Confidence:" in output
+    return has_urls and has_sources and has_confidence
+```
+
+### On Validation Failure
+
+```
+⚠️ Agent output validation failed
+
+Agent: {agent-id}
+Missing: {what's missing}
+
+Options:
+1. [Retry] Run agent again
+2. [Accept] Proceed anyway (not recommended)
+3. [Manual] Mark as incomplete, continue
 ```
 
 ---
@@ -463,8 +656,23 @@ Coverage: {percentage}
 ### From {agent-2}
 - ...
 
-## Conflicts Resolved
-{if agents disagreed}
+## Cross-Compare: Codebase vs Web Best Practices
+
+| Aspect | Current Code | Web Best Practice | Gap | Priority |
+|--------|--------------|-------------------|-----|----------|
+| {aspect} | {what code does} | {what web says} | Yes/No/Partial | High/Medium/Low |
+
+### Analysis
+- What's already following best practices
+- What's outdated or needs improvement
+- What conflicts exist between sources
+
+## Conflicts Found
+
+| Topic | Source A | Claim A | Source B | Claim B | Resolution |
+|-------|----------|---------|----------|---------|------------|
+
+**Note**: Conflicts are documented, not silently resolved.
 
 ## Solution Options
 
@@ -487,9 +695,22 @@ Coverage: {percentage}
 {anything still unclear}
 ```
 
+### Synthesis Checklist
+
+Before finalizing _summary.md, verify:
+
+- [ ] All research questions have answers (or explicit "not found")
+- [ ] All codebase agents completed successfully
+- [ ] All web agents completed successfully
+- [ ] Conflicts between agents identified and documented
+- [ ] Sources cited for key claims
+- [ ] Confidence rated per section
+- [ ] Cross-compare section completed
+- [ ] Recommendations consistent with findings
+
 ---
 
-## Step 11.5: Complexity Assessment (NEW)
+## Step 11.5: Complexity Assessment
 
 Calculate complexity score for Architecture Gate.
 
