@@ -85,7 +85,7 @@ if [ -f "$SCRIPT_DIR/.claude/orchestrator-rules.md" ]; then
     if [ "$UPGRADE_MODE" = true ]; then
         copy_with_backup "$SCRIPT_DIR/.claude/orchestrator-rules.md" "$CLAUDE_DIR/orchestrator-rules.md"
     else
-        copy_if_not_exists "$SCRIPT_DIR/.claude/orchestrator-rules.md" "$CLAUDE_DIR/orchestrator-rules.md"
+        copy_if_not_exists "$SCRIPT_DIR/.claude/orchestrator-rules.md" "$CLAUDE_DIR/orchestrator-rules.md" || true
     fi
 fi
 
@@ -97,7 +97,7 @@ for cmd in "$SCRIPT_DIR/.claude/commands"/*.md; do
         if [ "$UPGRADE_MODE" = true ]; then
             copy_with_backup "$cmd" "$CLAUDE_DIR/commands/$(basename "$cmd")"
         else
-            copy_if_not_exists "$cmd" "$CLAUDE_DIR/commands/$(basename "$cmd")"
+            copy_if_not_exists "$cmd" "$CLAUDE_DIR/commands/$(basename "$cmd")" || true
         fi
     fi
 done
@@ -111,7 +111,7 @@ for agent in "$SCRIPT_DIR/.claude/agents"/*.md; do
         if [ "$UPGRADE_MODE" = true ]; then
             copy_with_backup "$agent" "$CLAUDE_DIR/agents/$(basename "$agent")"
         else
-            copy_if_not_exists "$agent" "$CLAUDE_DIR/agents/$(basename "$agent")"
+            copy_if_not_exists "$agent" "$CLAUDE_DIR/agents/$(basename "$agent")" || true
         fi
     fi
 done
@@ -121,7 +121,7 @@ for agent in "$SCRIPT_DIR/.claude/agents/core"/*.md; do
         if [ "$UPGRADE_MODE" = true ]; then
             copy_with_backup "$agent" "$CLAUDE_DIR/agents/core/$(basename "$agent")"
         else
-            copy_if_not_exists "$agent" "$CLAUDE_DIR/agents/core/$(basename "$agent")"
+            copy_if_not_exists "$agent" "$CLAUDE_DIR/agents/core/$(basename "$agent")" || true
         fi
     fi
 done
