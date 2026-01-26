@@ -31,11 +31,19 @@ echo -e "\n${BLUE}Removing...${NC}\n"
 COMMANDS=(
     "orchestrate.md"
     "orchestrate-research.md"
+    "orchestrate-architecture.md"
     "orchestrate-plan.md"
     "orchestrate-execute.md"
+    "orchestrate-auto.md"
 )
 
-echo -e "${BLUE}[1/3] Commands${NC}"
+echo -e "${BLUE}[1/4] Orchestrator Rules${NC}"
+if [ -f "$CLAUDE_DIR/orchestrator-rules.md" ]; then
+    rm "$CLAUDE_DIR/orchestrator-rules.md"
+    echo -e "  ${RED}✗${NC} orchestrator-rules.md"
+fi
+
+echo -e "\n${BLUE}[2/4] Commands${NC}"
 for cmd in "${COMMANDS[@]}"; do
     if [ -f "$CLAUDE_DIR/commands/$cmd" ]; then
         rm "$CLAUDE_DIR/commands/$cmd"
@@ -49,11 +57,16 @@ AGENTS=(
     "codebase-analyzer.md"
     "codebase-pattern-finder.md"
     "web-search-researcher.md"
+    "web-official-docs.md"
+    "web-community.md"
+    "web-issues.md"
+    "web-academic.md"
+    "web-similar-systems.md"
     "devil-advocate.md"
     "second-opinion.md"
 )
 
-echo -e "\n${BLUE}[2/3] Agents (custom)${NC}"
+echo -e "\n${BLUE}[3/4] Agents (custom)${NC}"
 for agent in "${AGENTS[@]}"; do
     if [ -f "$CLAUDE_DIR/agents/$agent" ]; then
         rm "$CLAUDE_DIR/agents/$agent"
@@ -62,7 +75,7 @@ for agent in "${AGENTS[@]}"; do
 done
 
 # Validators
-echo -e "\n${BLUE}[3/3] Validators${NC}"
+echo -e "\n${BLUE}[4/4] Validators${NC}"
 if [ -f "$CLAUDE_DIR/validators/validate-orchestrate-files.py" ]; then
     rm "$CLAUDE_DIR/validators/validate-orchestrate-files.py"
     echo -e "  ${RED}✗${NC} validate-orchestrate-files.py"

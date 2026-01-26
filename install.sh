@@ -79,8 +79,18 @@ copy_with_backup() {
     fi
 }
 
-# 1. Install commands
-echo -e "${BLUE}[1/4] Commands${NC}"
+# 1. Install orchestrator rules (root level)
+echo -e "${BLUE}[1/5] Orchestrator Rules${NC}"
+if [ -f "$SCRIPT_DIR/.claude/orchestrator-rules.md" ]; then
+    if [ "$UPGRADE_MODE" = true ]; then
+        copy_with_backup "$SCRIPT_DIR/.claude/orchestrator-rules.md" "$CLAUDE_DIR/orchestrator-rules.md"
+    else
+        copy_if_not_exists "$SCRIPT_DIR/.claude/orchestrator-rules.md" "$CLAUDE_DIR/orchestrator-rules.md"
+    fi
+fi
+
+# 2. Install commands
+echo -e "\n${BLUE}[2/5] Commands${NC}"
 mkdir -p "$CLAUDE_DIR/commands"
 for cmd in "$SCRIPT_DIR/.claude/commands"/*.md; do
     if [ -f "$cmd" ]; then
@@ -92,8 +102,8 @@ for cmd in "$SCRIPT_DIR/.claude/commands"/*.md; do
     fi
 done
 
-# 2. Install agents
-echo -e "\n${BLUE}[2/4] Agents${NC}"
+# 3. Install agents
+echo -e "\n${BLUE}[3/5] Agents${NC}"
 mkdir -p "$CLAUDE_DIR/agents/core"
 
 for agent in "$SCRIPT_DIR/.claude/agents"/*.md; do
@@ -116,15 +126,15 @@ for agent in "$SCRIPT_DIR/.claude/agents/core"/*.md; do
     fi
 done
 
-# 3. Install validators
-echo -e "\n${BLUE}[3/4] Validators${NC}"
+# 4. Install validators
+echo -e "\n${BLUE}[4/5] Validators${NC}"
 mkdir -p "$CLAUDE_DIR/validators"
 for val in "$SCRIPT_DIR/.claude/validators"/*.py; do
     [ -f "$val" ] && copy_with_backup "$val" "$CLAUDE_DIR/validators/$(basename "$val")"
 done
 
-# 4. Configure hooks in settings.json
-echo -e "\n${BLUE}[4/4] Hooks${NC}"
+# 5. Configure hooks in settings.json
+echo -e "\n${BLUE}[5/5] Hooks${NC}"
 
 MERGE_RESULT=$(python3 "$SCRIPT_DIR/merge-settings.py" 2>&1)
 
