@@ -53,17 +53,23 @@ Building index improves code search quality (semantic + keyword).
 Build now? [Y/n]
 ```
 
-If user approves (or default Y), run via Bash:
+If user approves (or default Y), run via Bash with 3-step fallback:
+
+**Step 1**: GPU (default):
 ```bash
 leann build {project-name} --docs $(git ls-files)
 ```
-If fails with CUDA/memory error → retry on CPU:
+**Step 2**: If CUDA OOM → retry with anti-fragmentation:
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True leann build {project-name} --docs $(git ls-files)
+```
+**Step 3**: If still fails → CPU fallback:
 ```bash
 CUDA_VISIBLE_DEVICES="" leann build {project-name} --docs $(git ls-files)
 ```
 Then show: `LEANN: index built, ready`
 
-If both fail → `LEANN: index build failed, keyword-only mode`
+If all three fail → `LEANN: index build failed, keyword-only mode`
 
 **If available and index exists:**
 ```

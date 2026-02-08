@@ -56,17 +56,22 @@ If LEANN available but no index for current project — build automatically:
 Building LEANN index for semantic search...
 ```
 
-**Step 1**: Try with GPU:
+**Step 1**: GPU (default):
 ```bash
 leann build {project-name} --docs $(git ls-files)
 ```
 
-**Step 2**: If fails with CUDA/memory error → retry on CPU:
+**Step 2**: If CUDA OOM → retry with anti-fragmentation:
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True leann build {project-name} --docs $(git ls-files)
+```
+
+**Step 3**: If still fails → CPU fallback:
 ```bash
 CUDA_VISIBLE_DEVICES="" leann build {project-name} --docs $(git ls-files)
 ```
 
-If both fail → warn and continue without semantic search:
+If all three fail → warn and continue without semantic search:
 ```
 LEANN index build failed, continuing with keyword-only search.
 ```
