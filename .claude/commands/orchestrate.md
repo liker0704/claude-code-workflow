@@ -34,6 +34,34 @@ If no active tasks, show:
 ---
 ```
 
+### LEANN Status Check
+
+After showing tasks (or "No Active Tasks"), check LEANN semantic search status:
+
+1. Call `leann_list` MCP tool
+2. Based on result:
+
+**If MCP tool not available** (LEANN not installed):
+```
+LEANN: not installed (semantic search disabled, keyword-only mode)
+  Install: ./install.sh --upgrade  or  uv tool install leann-core --with leann
+```
+
+**If available but no index for current project:**
+```
+LEANN: connected, no index for this project
+  Build index for better code search: leann build {project-name} --docs $(git ls-files)
+```
+
+**If available and index exists:**
+```
+LEANN: ready ({index-name})
+```
+
+This is informational only — don't block or prompt, just show status.
+
+---
+
 Then proceed based on $ARGUMENTS:
 - If **empty**: show the active tasks table and stop (status-only mode)
 - If **task-slug of existing task**: offer to resume that task
