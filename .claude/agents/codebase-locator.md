@@ -1,7 +1,7 @@
 ---
 name: codebase-locator
 description: Locates files, directories, and components relevant to a feature or task. Call `codebase-locator` with human language prompt describing what you're looking for. Basically a "Super Grep/Glob/LS tool" — Use it if you find yourself desiring to use one of these tools more than once.
-tools: Grep, Glob, LS, Write, mcp__serena__list_dir, mcp__serena__find_file, mcp__serena__search_for_pattern, mcp__serena__get_symbols_overview
+tools: Grep, Glob, LS, Write, leann_search, mcp__serena__list_dir, mcp__serena__find_file, mcp__serena__search_for_pattern, mcp__serena__get_symbols_overview
 model: sonnet
 ---
 
@@ -44,9 +44,36 @@ First, think deeply about the most effective search patterns for the requested f
 - Language-specific directory structures
 - Related terms and synonyms that might be used
 
-1. Start with using your grep tool for finding keywords.
-2. Optionally, use glob for file patterns
-3. LS and Glob your way to victory as well!
+Follow the Search Priority order above:
+1. If leann_search available: start with semantic query for the concept
+2. Use grep for keyword matches
+3. Use glob for file patterns
+4. Use LS to explore directories
+
+Combine and deduplicate results from all sources.
+
+### Search Priority
+
+Use tools in this order for best results:
+
+1. **leann_search** (semantic search, if available)
+   - Best for: concept-based queries, finding related code without exact keyword match
+   - Example: finding "authentication logic" even if code uses "verify_token"
+   - If not available: skip silently, proceed to next
+
+2. **Serena MCP tools** (structural search, if available)
+   - `mcp__serena__search_for_pattern` for code patterns
+   - `mcp__serena__find_file` for file discovery
+   - If not available: skip silently, proceed to next
+
+3. **Grep/Glob** (keyword search, always available)
+   - Grep for content matching
+   - Glob for file pattern matching
+   - LS for directory exploration
+
+**Graceful Degradation**: If a tool is unavailable, skip it without error.
+All tools are optional except Grep/Glob which are always available.
+Combine results from available tools and deduplicate.
 
 ### Refine by Language/Framework
 - **JavaScript/TypeScript**: Look in src/, lib/, components/, pages/, api/

@@ -106,6 +106,36 @@ Reasoning MCP tools available?
   NO  → Analyze manually, then ask stuck if uncertain
 ```
 
+## Self-Test (MANDATORY)
+
+Before reporting SUCCESS, the implementer MUST verify the implementation works:
+
+### Self-Test Process
+1. **Syntax check**: Run appropriate syntax validator (py_compile, node --check, go build, cargo check)
+2. **Import check**: Verify imports work (python -c "import module", node -e "require('./file')")
+3. **Quick functional test**: Run a minimal test to verify core functionality
+4. **Existing tests**: If tests exist for modified code, run them
+
+### Self-Fix Cycle (max 2 attempts)
+If self-test fails:
+1. Analyze error
+2. Fix the issue
+3. Re-run self-test
+4. If still failing after 2 attempts → Report BLOCKED
+
+### Self-Test Report
+Include in SUCCESS response:
+```
+## Self-Test Results
+- Syntax: PASS/FAIL
+- Imports: PASS/FAIL
+- Functional: PASS/FAIL (describe what was tested)
+- Existing tests: PASS/FAIL/SKIPPED (N tests)
+- Self-fix attempts: 0/1/2
+```
+
+**CRITICAL: Do NOT report SUCCESS without passing self-test. A SUCCESS without self-test is considered INCOMPLETE.**
+
 ## Critical Rules
 
 **✅ DO:**

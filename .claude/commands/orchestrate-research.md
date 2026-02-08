@@ -38,6 +38,34 @@ Check task exists. Handle current status:
 
 ---
 
+## Step 3.5: EnsureIndex (Semantic Search)
+
+Check if LEANN semantic search is available and index exists.
+
+### Check Availability
+1. Try calling `leann_list` MCP tool
+2. If MCP tool not available → skip to Step 4 (keyword-only mode)
+3. If available but no index for current project → ask user:
+
+```
+LEANN semantic search available but no index found.
+Build index for better search results? [Y/n]
+```
+
+### Build Index (if user approves)
+Run via **Bash** (NOT MCP — leann build is CLI only):
+```bash
+leann build {project-name} --docs $(git ls-files)
+```
+
+If build fails → warn and continue without semantic search.
+
+### Set Search Mode
+- `SEARCH_MODE=hybrid` if LEANN available + index exists
+- `SEARCH_MODE=keyword` if LEANN not available or no index
+
+---
+
 ## Step 4: Scout Analysis
 
 Spawn scout agent for quick scope reconnaissance.
@@ -305,6 +333,10 @@ Every agent MUST receive:
 ## You are: {agent-id}
 ## Focus: {focus}
 
+## OUTPUT FILE
+Write your full report to: {output_file}
+Path format: tmp/.orchestrate/{task-slug}/research/{agent-id}.md
+
 ## YOUR SCOPE
 
 | Category | Items |
@@ -334,6 +366,16 @@ Rate each finding:
 - **Low (<50%)**: Limited sources, or significant uncertainty
 
 Include percentage: "Confidence: High (85%)"
+
+## SEARCH STRATEGY
+
+Use this priority order:
+1. **leann_search** (semantic, if available) — best for concept/intent queries
+2. **mcp__serena__search_for_pattern** (structural, if available) — best for symbol/pattern queries
+3. **Grep/Glob** (keyword) — always available, use for exact matches
+
+If leann_search is NOT available, skip to step 2/3. Do not error.
+Combine results from multiple strategies for best coverage.
 
 ## COMPLETENESS CHECKLIST
 
@@ -437,6 +479,10 @@ Parameters:
     ## WEB RESEARCH MISSION
 
     Task: {task description}
+
+    ## OUTPUT FILE
+    Write your full report to: {output_file}
+    Path format: tmp/.orchestrate/{task-slug}/research/{agent-id}.md
 
     ## CONTEXT FROM CODEBASE ANALYSIS
 
@@ -647,6 +693,9 @@ When coverage complete, create `research/_summary.md`:
 Created: {timestamp}
 Agents: {N}
 Coverage: {percentage}
+Search-mode: {hybrid | keyword}
+Semantic-hits: {count or N/A}
+Keyword-hits: {count}
 
 ## Key Findings
 

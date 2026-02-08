@@ -331,6 +331,61 @@ rust-gdb target/debug/app
 
 ---
 
+## Pipeline Integration
+
+When spawned as part of an auto-debug cycle in orchestrated execution:
+
+### Auto-Debug Flow
+```
+Test Gate FAIL → debugger → implementer fix → retest (max 3 cycles)
+```
+
+### Input
+You receive:
+- **Test gate report**: Structured test results with failures
+- **Implementation context**: What was just implemented
+- **Previous fix attempts**: History of prior debug cycles (if any)
+
+### Your Job in Pipeline
+1. Read the test gate report
+2. Identify root cause for EACH failed test
+3. Provide specific fix instructions for implementer
+4. Prioritize: fix the simplest/most impactful failures first
+
+### Output for Pipeline
+Return structured fix instructions:
+```markdown
+## Auto-Debug Report
+
+### Cycle: {N}/3
+
+### Failures Analyzed: {count}
+
+### Fix Instructions (for implementer)
+1. **{test_name}** (file:line)
+   - Root cause: {explanation}
+   - Fix: {specific change needed}
+   - File: {file to modify}
+   - Expected: {what should happen after fix}
+
+2. **{test_name}** (file:line)
+   - Root cause: {explanation}
+   - Fix: {specific change needed}
+   - File: {file to modify}
+   - Expected: {what should happen after fix}
+
+### Confidence: HIGH | MEDIUM | LOW
+### Escalate: YES | NO (if LOW confidence or cycle 3/3, recommend escalation)
+```
+
+### Escalation Rules
+- **Cycle 1**: Always attempt fix
+- **Cycle 2**: Attempt fix if confidence >= MEDIUM
+- **Cycle 3**: Last chance. If fix fails, escalate to human with full context
+- **If confidence LOW on any cycle**: Recommend escalation immediately
+
+---
+
 ## Critical Rules
 
 **✅ DO:**

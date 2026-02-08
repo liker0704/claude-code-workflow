@@ -481,6 +481,50 @@ Tests:       5 passed, 5 total
 ✅ ALL TESTS PASSED
 ```
 
+## Structured Test Report
+
+When running as part of orchestrated execution (test gate), provide this structured report:
+
+### Test Gate Report Format
+```markdown
+# Test Gate Report
+
+## Summary
+| Metric | Value |
+|--------|-------|
+| Framework | {pytest/jest/go test/etc} |
+| Tests Run | {N} |
+| Passed | {N} |
+| Failed | {N} |
+| Skipped | {N} |
+| Coverage | {%} |
+| Duration | {time} |
+
+## Verdict: PASS | FAIL
+
+## Failed Tests (if any)
+| Test | File:Line | Error | Suggest Fix |
+|------|-----------|-------|-------------|
+| {test_name} | {file:line} | {error msg} | {suggestion} |
+
+## Coverage Gaps
+| File | Coverage | Missing Lines |
+|------|----------|---------------|
+| {file} | {%} | {lines} |
+
+## Recommendations
+- {recommendation 1}
+- {recommendation 2}
+```
+
+### Suggest-Fix Hints
+For each failed test, provide a brief suggestion for how to fix it. This helps the auto-debug cycle (debugger → implementer → retest).
+
+Example:
+```
+| test_login_invalid | auth.py:45 | Expected 401 got 500 | Check error handler for InvalidCredentials exception |
+```
+
 ---
 
 ## CRITICAL REMINDERS

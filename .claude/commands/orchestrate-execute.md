@@ -50,9 +50,11 @@ max_parallel_tasks: 3
 ### Pipeline (ENFORCED)
 
 ```
-implementer → tester → REVIEW GATE → complete
-                          ↓
-                    BLOCKED until APPROVED
+implementer (self-test) → TEST GATE (/verify) → tester → REVIEW GATE → complete
+                               ↓ FAIL
+                          auto-debug cycle (max 3)
+                               ↓ STILL FAIL
+                          BLOCKED → escalate
 ```
 
 ### Task-Level Review
@@ -133,6 +135,59 @@ Parameters:
 **If NEEDS_CHANGES:** Fix issues → re-run batch review.
 **If BLOCKED:** Stop execution, escalate to user.
 
+### BATCH GATE (AFTER BATCH REVIEW)
+
+After batch review is APPROVED, run BATCH GATE verification:
+
+**Process:**
+
+1. **Run full project verification** on entire codebase:
+   ```yaml
+   Tool: Task
+   Parameters:
+     subagent_type: "tester"
+     prompt: |
+       ## BATCH GATE: Batch {N}
+
+       Run FULL project verification after batch completion.
+
+       Run all verification checks (build, types, lint, tests, secrets, debug).
+
+       ## OUTPUT
+
+       Write to: execution/batch-{N}-gate.md
+
+       ### Batch Gate Report
+
+       | Check | Status | Details |
+       |-------|--------|---------|
+       | Build | PASS/FAIL/SKIP | {summary} |
+       | Types | PASS/FAIL/SKIP | {summary} |
+       | Lint | PASS/FAIL/WARN/SKIP | {summary} |
+       | Tests | PASS/FAIL/SKIP | {summary} |
+       | Secrets | PASS/FAIL/SKIP | {summary} |
+       | Debug | PASS/WARN/SKIP | {summary} |
+
+       ### Verdict: PASS | FAIL
+
+       {If FAIL, identify which task(s) likely caused the issue}
+
+     description: "BATCH GATE batch {N}"
+   ```
+
+2. **Parse BATCH GATE result**:
+   - **PASS**: Proceed to next batch
+   - **FAIL**: Identify culprit task(s) and apply auto-debug
+
+3. **If FAIL - Identify Culprit**:
+   - Compare gate errors with files modified in this batch
+   - Identify task(s) that touched relevant files
+   - Apply auto-debug cycle to identified task(s)
+
+4. **Re-run BATCH GATE** after fixes
+
+**DO NOT proceed to next batch until BATCH GATE passes.**
+
 ## Step 1: Validate Task
 
 ```
@@ -162,6 +217,14 @@ Started: {timestamp}
 | Task | Status | Agent | Started | Updated |
 |------|--------|-------|---------|---------|
 | task-01 | ⏳ pending | - | - | - |
+```
+
+Create `execution/_issues.md`:
+```markdown
+# Issues Log: {task-slug}
+
+| # | Task | Type | Description | Status | Resolution |
+|---|------|------|-------------|--------|------------|
 ```
 
 ## Step 4: Read Task Definitions
@@ -315,6 +378,168 @@ Parameters:
   description: "Test task-{XX}"
 ```
 
+### TEST GATE (MANDATORY AFTER IMPLEMENTER)
+
+After implementer completes, run TEST GATE before proceeding to tester/reviewer.
+
+**Process:**
+
+1. **Run project verification** (equivalent to `/verify` command):
+   - Spawn tester agent with `run_verification_checks: true` flag
+   - Agent runs: build, types, lint, tests, secrets scan, debug audit
+   - Agent produces PASS/FAIL verdict with structured report
+
+2. **Parse TEST GATE result**:
+   - **PASS**: Proceed to tester for comprehensive testing
+   - **FAIL**: Enter AUTO-DEBUG CYCLE
+
+**TEST GATE Template:**
+
+```yaml
+Tool: Task
+Parameters:
+  subagent_type: "tester"
+  prompt: |
+    ## TEST GATE: task-{XX}
+
+    Run verification checks (build, types, lint, tests, secrets, debug).
+
+    Implementation: tmp/.orchestrate/{task-slug}/execution/task-{XX}-{name}.md
+    Files modified: {list from implementer report}
+
+    ## OUTPUT FORMAT
+
+    Write to: tmp/.orchestrate/{task-slug}/execution/task-{XX}-gate.md
+
+    ### Test Gate Report
+
+    | Check | Status | Details |
+    |-------|--------|---------|
+    | Build | PASS/FAIL/SKIP | {summary} |
+    | Types | PASS/FAIL/SKIP | {summary} |
+    | Lint | PASS/FAIL/WARN/SKIP | {summary} |
+    | Tests | PASS/FAIL/SKIP | {summary} |
+    | Secrets | PASS/FAIL/SKIP | {summary} |
+    | Debug | PASS/WARN/SKIP | {summary} |
+
+    ### Verdict: PASS | FAIL
+
+    {If FAIL, provide error details for debugger}
+
+  description: "TEST GATE task-{XX}"
+```
+
+### AUTO-DEBUG CYCLE (MAX 3 ITERATIONS)
+
+When TEST GATE fails, enter auto-debug cycle:
+
+**Cycle Loop (max 3 iterations):**
+
+```
+FOR cycle IN 1..3:
+
+  1. Log failure to _issues.md:
+     | {N} | task-{XX} | TEST_GATE_FAIL | Cycle {cycle}: {failed checks} | debugging | - |
+
+  2. Spawn debugger agent:
+
+     Tool: Task
+     Parameters:
+       subagent_type: "debugger"
+       prompt: |
+         ## AUTO-DEBUG: task-{XX} (Cycle {cycle}/3)
+
+         TEST GATE FAILED. Analyze and provide fix instructions.
+
+         **Failed gate report**: execution/task-{XX}-gate.md
+         **Implementation**: execution/task-{XX}-{name}.md
+         **Files modified**: {list}
+
+         ## OUTPUT
+
+         Write to: execution/task-{XX}-debug-cycle{cycle}.md
+
+         ### Root Cause Analysis
+         {What's wrong and why}
+
+         ### Fix Instructions (for implementer)
+         | File | Line/Section | Change Required | Reason |
+         |------|--------------|-----------------|--------|
+
+         ### Expected Result
+         {What should happen after fix}
+
+       description: "Debug task-{XX} cycle {cycle}"
+
+  3. Spawn implementer with FIX MODE:
+
+     Tool: Task
+     Parameters:
+       subagent_type: "implementer"
+       prompt: |
+         ## FIX MODE: task-{XX} (Auto-Debug Cycle {cycle}/3)
+
+         Original task: {task description}
+
+         **DEBUGGER RECOMMENDATIONS**: execution/task-{XX}-debug-cycle{cycle}.md
+
+         APPLY the debugger's fix instructions precisely.
+
+         ## Process
+         1. Read debugger report
+         2. Apply fixes exactly as specified
+         3. Run self-test (mandatory)
+         4. Output to: execution/task-{XX}-{name}.md (OVERWRITE)
+
+       description: "Fix task-{XX} cycle {cycle}"
+
+  4. Re-run TEST GATE:
+     {Same as original TEST GATE, overwrites task-{XX}-gate.md}
+
+  5. Check result:
+     - PASS → Log resolution to _issues.md, exit cycle, proceed to tester
+     - FAIL → Continue to next cycle
+
+  6. If cycle = 3 and still FAIL:
+     - Update _issues.md: Status = BLOCKED
+     - Mark task as BLOCKED
+     - Escalate to user with summary of all 3 cycles
+```
+
+**Escalation Message (after 3 failed cycles):**
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ AUTO-DEBUG FAILED: task-{XX}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Task: {name}
+Cycles attempted: 3
+Status: BLOCKED - requires human intervention
+
+## Cycle Summary
+
+| Cycle | Failed Checks | Fix Attempted | Result |
+|-------|---------------|---------------|--------|
+| 1 | {checks} | {summary} | FAIL |
+| 2 | {checks} | {summary} | FAIL |
+| 3 | {checks} | {summary} | FAIL |
+
+## Reports Available
+- execution/task-{XX}-gate.md (final gate report)
+- execution/task-{XX}-debug-cycle1.md
+- execution/task-{XX}-debug-cycle2.md
+- execution/task-{XX}-debug-cycle3.md
+- execution/task-{XX}-{name}.md (latest implementation)
+
+## Options
+[Review] Read debug reports and implementation
+[Manual Fix] Let me fix it manually
+[Skip] Skip this task and continue
+[Abort] Stop execution
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
 ### Track Progress
 
 Save to `execution/_tasks.json`:
@@ -383,6 +608,117 @@ Options:
 
 When all tasks finish, perform comprehensive final review with **4 parallel reviewers**.
 
+### F0: FINAL GATE (PRE-REVIEW VERIFICATION)
+
+Before spawning 4 reviewers, run FINAL GATE verification:
+
+**Step 1: Run Full Verification**
+
+```yaml
+Tool: Task
+Parameters:
+  subagent_type: "tester"
+  prompt: |
+    ## FINAL GATE: {task-slug}
+
+    Run COMPLETE project verification before final review.
+
+    Run all verification checks (build, types, lint, tests, secrets, debug).
+
+    ## OUTPUT
+
+    Write to: execution/_final-gate.md
+
+    ### Final Gate Report
+
+    | Check | Status | Details |
+    |-------|--------|---------|
+    | Build | PASS/FAIL/SKIP | {summary} |
+    | Types | PASS/FAIL/SKIP | {summary} |
+    | Lint | PASS/FAIL/WARN/SKIP | {summary} |
+    | Tests | PASS/FAIL/SKIP | {summary} |
+    | Secrets | PASS/FAIL/SKIP | {summary} |
+    | Debug | PASS/WARN/SKIP | {summary} |
+
+    ### Verdict: PASS | FAIL
+
+    ALL checks must PASS (or SKIP/WARN) for FINAL GATE to pass.
+
+  description: "FINAL GATE verification"
+```
+
+**Step 2: Check Acceptance Criteria (if exists)**
+
+If `plan/acceptance.md` exists:
+
+1. Read acceptance.md
+2. Parse DoD checklist items (`- [ ]` or `- [x]`)
+3. For each item, verify evidence in execution reports and git diff
+4. Generate verification report:
+
+```markdown
+## Acceptance Criteria Verification
+
+| # | Criterion | Status | Evidence |
+|---|-----------|--------|----------|
+| 1 | {criterion text} | ✅/❌ | {reference to implementation/test} |
+| 2 | {criterion text} | ✅/❌ | {reference to implementation/test} |
+
+### Unmet Criteria
+{List any items marked ❌}
+
+### Verification: COMPLETE | INCOMPLETE
+```
+
+Write to: `execution/_acceptance-check.md`
+
+**Step 3: FINAL GATE Decision**
+
+- **PASS**: All verification checks pass AND (no acceptance.md OR all criteria met)
+  - Proceed to F1 (4-reviewer review)
+
+- **FAIL**: Any verification check fails OR acceptance criteria unmet
+  - DO NOT proceed to reviewers
+  - Present failure report to user
+  - Offer: [Fix] [Review Issues] [Override (not recommended)]
+
+**FINAL GATE Failure Report:**
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ FINAL GATE FAILED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Task: {task-slug}
+
+## Verification Results
+
+{Table from _final-gate.md}
+
+## Acceptance Criteria (if applicable)
+
+{Summary from _acceptance-check.md}
+
+## Action Required
+
+Fix these issues before proceeding to final review:
+- {issue 1}
+- {issue 2}
+
+Reports:
+- execution/_final-gate.md
+- execution/_acceptance-check.md (if applicable)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[Fix] Address issues
+[Review] View detailed reports
+[Override] Skip gate (not recommended)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Only proceed to 4-reviewer final review if FINAL GATE passes.**
+
 ### F1: Generate Summary
 
 ```bash
@@ -390,17 +726,6 @@ git diff HEAD~{N}..HEAD --stat
 ```
 
 Create `execution/_final-summary.md` with all changes, tasks completed, requirements coverage.
-
-### F2: Comprehensive Verification
-
-```bash
-pytest tests/ -v
-mypy src/ || true
-ruff check . || true
-npm run build || cargo build || go build ./... || true
-```
-
-**If fails:** Fix before proceeding.
 
 ### F3: Spawn 4 Reviewers (PARALLEL)
 

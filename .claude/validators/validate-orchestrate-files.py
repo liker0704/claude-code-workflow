@@ -163,6 +163,22 @@ ERROR_HINTS = {
         "Decision section missing 'Rationale:'",
         "Add '**Rationale:** why this approach was chosen' to Decision section"
     ),
+
+    # risks.md
+    "missing_risk_table": (
+        "Missing required risk table headers",
+        "Add markdown table with headers: | Risk | Likelihood | Impact | Mitigation |"
+    ),
+
+    # acceptance.md
+    "missing_checklist_items": (
+        "Missing checklist items (Definition of Done)",
+        "Add at least one checklist item: '- [ ] requirement description' or '- [x] completed item'"
+    ),
+    "missing_dod_header": (
+        "Missing Definition of Done header",
+        "Add section header: '## Definition of Done' or '## Acceptance Criteria' or '## DoD'"
+    ),
 }
 
 
@@ -188,7 +204,8 @@ def output_deny(filename: str, errors: list[str]) -> None:
         f"BLOCKED by validate-orchestrate-files.py\n\n"
         f"File: {filename}\n\n"
         f"Errors:\n{error_list}\n\n"
-        f"Fix the errors above and retry writing the file."
+        f"Fix the errors above and retry writing the file.\n\n"
+        f"See ~/.claude/docs/orchestrate-file-formats.md for correct format."
     )
 
     output = {
@@ -200,6 +217,37 @@ def output_deny(filename: str, errors: list[str]) -> None:
     }
 
     print(json.dumps(output))
+
+
+def check_secrets(content: str) -> tuple[bool, list[str]]:
+    """
+    Check content for hardcoded secrets.
+    Returns (is_safe, list_of_findings).
+    """
+    findings = []
+
+    # Pattern 1: API keys (sk-...)
+    api_keys = re.findall(r'sk-[a-zA-Z0-9]{20,}', content)
+    if api_keys:
+        findings.append(f"API key detected: {api_keys[0][:15]}... (potential leak)")
+
+    # Pattern 2: AWS keys (AKIA...)
+    aws_keys = re.findall(r'AKIA[A-Z0-9]{16}', content)
+    if aws_keys:
+        findings.append(f"AWS access key detected: {aws_keys[0]} (potential leak)")
+
+    # Pattern 3: Hardcoded passwords
+    passwords = re.findall(r'password\s*=\s*["\']([^"\']+)["\']', content, re.IGNORECASE)
+    if passwords:
+        findings.append(f"Hardcoded password detected: password=\"{passwords[0][:10]}...\" (security risk)")
+
+    # Pattern 4: Private keys
+    private_keys = re.findall(r'-----BEGIN.*PRIVATE KEY-----', content)
+    if private_keys:
+        findings.append(f"Private key detected: {private_keys[0]} (critical security risk)")
+
+    is_safe = len(findings) == 0
+    return is_safe, findings
 
 
 def get_hook_input():
@@ -469,6 +517,56 @@ def validate_architecture_md(content: str) -> tuple[bool, list[str]]:
     return len(errors) == 0, errors
 
 
+def validate_risks_md(content: str) -> tuple[bool, list[str]]:
+    """Validate risks.md has proper risk table."""
+    errors = []
+
+    # Required table headers (case-insensitive)
+    required_headers = ['Risk', 'Likelihood', 'Impact', 'Mitigation']
+
+    # Check if all required headers exist (case-insensitive)
+    content_lower = content.lower()
+    missing_headers = []
+    for header in required_headers:
+        if header.lower() not in content_lower:
+            missing_headers.append(header)
+
+    if missing_headers:
+        errors.append(format_error_with_hint("missing_risk_table"))
+        return False, errors
+
+    # Additional validation: check for markdown table format (optional but recommended)
+    # Look for table delimiter row like |---|---|---|---|
+    has_table_delimiter = re.search(r'\|[\s-]+\|[\s-]+\|[\s-]+\|[\s-]+\|', content)
+    if not has_table_delimiter:
+        # Warning but not blocking - headers might be present but not in table format
+        print(f"  Warning: Risk table headers found but table formatting (|---|---|) not detected", file=sys.stderr)
+
+    return len(errors) == 0, errors
+
+
+def validate_acceptance_md(content: str) -> tuple[bool, list[str]]:
+    """Validate acceptance.md has DoD checklist."""
+    errors = []
+
+    # Check for checklist items: - [ ] or - [x]
+    checklist_pattern = re.compile(r'-\s+\[[ xX]\]')
+    matches = checklist_pattern.findall(content)
+
+    if len(matches) == 0:
+        errors.append(format_error_with_hint("missing_checklist_items"))
+
+    # Check for Definition of Done header (case-insensitive)
+    content_lower = content.lower()
+    dod_keywords = ['definition of done', 'acceptance criteria', 'dod']
+    has_dod_header = any(keyword in content_lower for keyword in dod_keywords)
+
+    if not has_dod_header:
+        errors.append(format_error_with_hint("missing_dod_header"))
+
+    return len(errors) == 0, errors
+
+
 def main():
     try:
         hook_input = get_hook_input()
@@ -482,7 +580,21 @@ def main():
         if "tmp/.orchestrate/" not in file_path:
             sys.exit(0)  # Not an orchestrate file, skip
 
-        # Determine file type and validate
+        # STEP 1: Check for secrets in ALL orchestrate files
+        secrets_safe, secrets_findings = check_secrets(content)
+        if not secrets_safe:
+            filename = os.path.basename(file_path)
+            secrets_errors = [
+                "SECURITY RISK: Hardcoded secrets detected in file!",
+                "",
+            ] + secrets_findings + [
+                "",
+                "NEVER write secrets to orchestrate files. Use environment variables or config files instead."
+            ]
+            output_deny(filename, secrets_errors)
+            sys.exit(0)  # Exit 0, Claude reads JSON for deny
+
+        # STEP 2: Determine file type and validate structure
         filename = os.path.basename(file_path)
         is_valid = True
         errors = []
@@ -499,8 +611,12 @@ def main():
             is_valid, errors = validate_summary_md(content)
         elif filename == "architecture.md":
             is_valid, errors = validate_architecture_md(content)
+        elif filename == "risks.md":
+            is_valid, errors = validate_risks_md(content)
+        elif filename == "acceptance.md":
+            is_valid, errors = validate_acceptance_md(content)
         else:
-            # Other files - no validation
+            # Other files - no structure validation, but secrets check passed
             sys.exit(0)
 
         if not is_valid:
