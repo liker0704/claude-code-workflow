@@ -21,12 +21,16 @@ ORCHESTRATOR_HOOK = {
 
 SESSION_HOOKS = {
     "SessionStart": [{
-        "type": "command",
-        "command": "python3 ~/.claude/hooks/session-start.py"
+        "hooks": [{
+            "type": "command",
+            "command": "python3 ~/.claude/hooks/session-start.py"
+        }]
     }],
     "SessionEnd": [{
-        "type": "command",
-        "command": "python3 ~/.claude/hooks/session-end.py"
+        "hooks": [{
+            "type": "command",
+            "command": "python3 ~/.claude/hooks/session-end.py"
+        }]
     }]
 }
 
@@ -90,9 +94,10 @@ def main():
 
     session_start_exists = False
     for hook in settings["hooks"]["SessionStart"]:
-        if "session-start.py" in hook.get("command", ""):
-            session_start_exists = True
-            break
+        for h in hook.get("hooks", []):
+            if "session-start.py" in h.get("command", ""):
+                session_start_exists = True
+                break
 
     if not session_start_exists:
         settings["hooks"]["SessionStart"].extend(SESSION_HOOKS["SessionStart"])
@@ -104,9 +109,10 @@ def main():
 
     session_end_exists = False
     for hook in settings["hooks"]["SessionEnd"]:
-        if "session-end.py" in hook.get("command", ""):
-            session_end_exists = True
-            break
+        for h in hook.get("hooks", []):
+            if "session-end.py" in h.get("command", ""):
+                session_end_exists = True
+                break
 
     if not session_end_exists:
         settings["hooks"]["SessionEnd"].extend(SESSION_HOOKS["SessionEnd"])

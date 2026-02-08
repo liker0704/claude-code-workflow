@@ -135,14 +135,14 @@ if len(new_pre) != len(pre):
 
 # Remove SessionStart hook
 ss = hooks.get('SessionStart', [])
-new_ss = [h for h in ss if 'session-start.py' not in h.get('command', '')]
+new_ss = [h for h in ss if not any('session-start.py' in sub.get('command', '') for sub in h.get('hooks', []))]
 if len(new_ss) != len(ss):
     hooks['SessionStart'] = new_ss
     changed = True
 
 # Remove SessionEnd hook
 se = hooks.get('SessionEnd', [])
-new_se = [h for h in se if 'session-end.py' not in h.get('command', '')]
+new_se = [h for h in se if not any('session-end.py' in sub.get('command', '') for sub in h.get('hooks', []))]
 if len(new_se) != len(se):
     hooks['SessionEnd'] = new_se
     changed = True
