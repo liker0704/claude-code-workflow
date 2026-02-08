@@ -43,22 +43,28 @@ After showing tasks (or "No Active Tasks"), check LEANN semantic search status:
 
 **If MCP tool not available** (LEANN not installed):
 ```
-LEANN: not installed (semantic search disabled, keyword-only mode)
-  Install: ./install.sh --upgrade  or  uv tool install leann-core --with leann
+LEANN: not installed (keyword-only search)
 ```
 
-**If available but no index for current project:**
+**If available but no index for current project** — offer to build immediately:
 ```
-LEANN: connected, no index for this project
-  Build index for better code search: leann build {project-name} --docs $(git ls-files)
+LEANN: connected, but no index for this project.
+Building index improves code search quality (semantic + keyword).
+Build now? [Y/n]
 ```
+
+If user approves (or default Y), run via Bash:
+```bash
+leann build {project-name} --docs $(git ls-files)
+```
+Then show: `LEANN: index built, ready`
+
+If build fails → `LEANN: index build failed, keyword-only mode`
 
 **If available and index exists:**
 ```
 LEANN: ready ({index-name})
 ```
-
-This is informational only — don't block or prompt, just show status.
 
 ---
 
