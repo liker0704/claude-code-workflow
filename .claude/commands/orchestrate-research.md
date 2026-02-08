@@ -52,16 +52,21 @@ Check if LEANN semantic search is available and index exists.
 ### Build Index (auto, if missing)
 If LEANN available but no index for current project — build automatically:
 
-```bash
-leann build {project-name} --docs $(git ls-files)
-```
-
-Show progress:
 ```
 Building LEANN index for semantic search...
 ```
 
-If build fails → warn and continue without semantic search:
+**Step 1**: Try with GPU:
+```bash
+leann build {project-name} --docs $(git ls-files)
+```
+
+**Step 2**: If fails with CUDA/memory error → retry on CPU:
+```bash
+CUDA_VISIBLE_DEVICES="" leann build {project-name} --docs $(git ls-files)
+```
+
+If both fail → warn and continue without semantic search:
 ```
 LEANN index build failed, continuing with keyword-only search.
 ```

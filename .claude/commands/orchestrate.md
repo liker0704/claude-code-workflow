@@ -57,9 +57,13 @@ If user approves (or default Y), run via Bash:
 ```bash
 leann build {project-name} --docs $(git ls-files)
 ```
+If fails with CUDA/memory error → retry on CPU:
+```bash
+CUDA_VISIBLE_DEVICES="" leann build {project-name} --docs $(git ls-files)
+```
 Then show: `LEANN: index built, ready`
 
-If build fails → `LEANN: index build failed, keyword-only mode`
+If both fail → `LEANN: index build failed, keyword-only mode`
 
 **If available and index exists:**
 ```
