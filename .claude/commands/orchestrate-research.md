@@ -32,7 +32,7 @@ Research phase for task: **$ARGUMENTS**
 ## Step 1-3: Validate & Update Status
 
 Check task exists. Handle current status:
-- **initialized**: Proceed to Step 4
+- **initialized**: Proceed to Step 3.5 (EnsureIndex)
 - **researching**: Check `_agents.json`, resume incomplete agents via TaskOutput
 - **research-complete+**: Offer view summary / re-run / proceed to plan
 
@@ -40,29 +40,35 @@ Check task exists. Handle current status:
 
 ## Step 3.5: EnsureIndex (Semantic Search)
 
+**MANDATORY** — always run this step before scout or any agents.
+
 Check if LEANN semantic search is available and index exists.
 
 ### Check Availability
 1. Try calling `leann_list` MCP tool
-2. If MCP tool not available → skip to Step 4 (keyword-only mode)
-3. If available but no index for current project → ask user:
+2. If MCP tool not available → set `SEARCH_MODE=keyword`, skip to Step 4
+3. If available → check if an index exists for current project
 
-```
-LEANN semantic search available but no index found.
-Build index for better search results? [Y/n]
-```
+### Build Index (auto, if missing)
+If LEANN available but no index for current project — build automatically:
 
-### Build Index (if user approves)
-Run via **Bash** (NOT MCP — leann build is CLI only):
 ```bash
 leann build {project-name} --docs $(git ls-files)
 ```
 
-If build fails → warn and continue without semantic search.
+Show progress:
+```
+Building LEANN index for semantic search...
+```
+
+If build fails → warn and continue without semantic search:
+```
+LEANN index build failed, continuing with keyword-only search.
+```
 
 ### Set Search Mode
-- `SEARCH_MODE=hybrid` if LEANN available + index exists
-- `SEARCH_MODE=keyword` if LEANN not available or no index
+- `SEARCH_MODE=hybrid` if LEANN available + index exists → tell user: `Search mode: hybrid (semantic + keyword)`
+- `SEARCH_MODE=keyword` if LEANN not available or no index → tell user: `Search mode: keyword-only`
 
 ---
 
