@@ -45,7 +45,7 @@ Check task exists. Handle current status:
 Check if LEANN semantic search is available and index exists.
 
 ### Check Availability
-1. Try calling `leann_list` MCP tool
+1. Try calling `mcp__leann-server__leann_list` MCP tool
 2. If MCP tool not available → set `SEARCH_MODE=keyword`, skip to Step 4
 3. If available → check if an index exists for current project
 
@@ -385,18 +385,18 @@ Include percentage: "Confidence: High (85%)"
 
 ## SEARCH STRATEGY
 
-**leann_search is your PRIMARY search tool.** Start every investigation with semantic search.
+**mcp__leann-server__leann_search is your PRIMARY search tool.** Start every investigation with semantic search.
 
-1. **leann_search** — START HERE for every search task
+1. **mcp__leann-server__leann_search** — START HERE for every search task
    - Use for: initial exploration, finding related code by concept
    - Run 1-3 queries with different phrasings for coverage
-   - If unavailable: log "leann_search: unavailable", fall back to step 2
+   - If unavailable: log "mcp__leann-server__leann_search: unavailable", fall back to step 2
 2. **mcp__serena__search_for_pattern** — for precise symbol/pattern queries
 3. **Grep/Glob** — for exact keyword matches, literal strings, file patterns
 
 Report which tools were used in your output footer:
 ```
-Search tools: leann_search ✅ | serena ✅ | grep ✅
+Search tools: mcp__leann-server__leann_search ✅ | serena ✅ | grep ✅
 ```
 
 ## COMPLETENESS CHECKLIST

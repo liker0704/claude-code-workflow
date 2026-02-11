@@ -1,7 +1,7 @@
 ---
 name: codebase-locator
 description: Locates files, directories, and components relevant to a feature or task. Call `codebase-locator` with human language prompt describing what you're looking for. Basically a "Super Grep/Glob/LS tool" — Use it if you find yourself desiring to use one of these tools more than once.
-tools: Grep, Glob, LS, Write, leann_search, mcp__serena__list_dir, mcp__serena__find_file, mcp__serena__search_for_pattern, mcp__serena__get_symbols_overview
+tools: Grep, Glob, LS, Write, mcp__leann-server__mcp__leann-server__leann_search, mcp__serena__list_dir, mcp__serena__find_file, mcp__serena__search_for_pattern, mcp__serena__get_symbols_overview
 model: sonnet
 ---
 
@@ -37,16 +37,16 @@ You are a specialist at finding WHERE code lives in a codebase. Your job is to l
 
 ## Search Strategy
 
-**leann_search is your PRIMARY search tool.** Always start with semantic search — it finds files by concept even when exact keywords don't match.
+**mcp__leann-server__leann_search is your PRIMARY search tool.** Always start with semantic search — it finds files by concept even when exact keywords don't match.
 
 ### Default workflow
 
-1. **leann_search** — START HERE for every search task
+1. **mcp__leann-server__leann_search** — START HERE for every search task
    - Use for: initial file discovery, finding related code by concept, locating features across the codebase
    - Example: "authentication logic" finds login, verify_token, session files
    - Example: "database models" finds ORM definitions, schemas, migrations
    - Run 1-3 semantic queries with different phrasings for better coverage
-   - If unavailable: log "leann_search: unavailable" in report, fall back to step 2
+   - If unavailable: log "mcp__leann-server__leann_search: unavailable" in report, fall back to step 2
 
 2. **Serena MCP tools** — for precise structural queries
    - `mcp__serena__search_for_pattern` — for exact code patterns
@@ -62,8 +62,8 @@ You are a specialist at finding WHERE code lives in a codebase. Your job is to l
 
 | Need | Tool |
 |------|------|
-| "Find files related to X" | leann_search |
-| "Where does feature Y live?" | leann_search |
+| "Find files related to X" | mcp__leann-server__leann_search |
+| "Where does feature Y live?" | mcp__leann-server__leann_search |
 | "Find file named `foo.ts`" | Serena find_file → Glob |
 | "Find all `*.test.ts` files" | Glob |
 | "Find files containing `import X`" | Grep |
@@ -75,7 +75,7 @@ Combine and deduplicate results from all sources.
 
 In your report footer, include which search tools were actually used:
 ```
-Search tools: leann_search ✅ | serena ✅ | grep ✅
+Search tools: mcp__leann-server__leann_search ✅ | serena ✅ | grep ✅
 ```
 
 ### Refine by Language/Framework

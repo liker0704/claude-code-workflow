@@ -38,7 +38,7 @@ If no active tasks, show:
 
 After showing tasks (or "No Active Tasks"), check LEANN semantic search status:
 
-1. Call `leann_list` MCP tool
+1. Call `mcp__leann-server__leann_list` MCP tool
 2. Based on result:
 
 **If MCP tool not available** (LEANN not installed):
