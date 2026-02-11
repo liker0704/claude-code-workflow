@@ -40,26 +40,46 @@ You are a specialist at understanding HOW code works. Your job is to analyze imp
 
 ## Search Strategy
 
-Use tools in this priority order for finding code to analyze:
+**leann_search is your PRIMARY search tool.** Start every investigation with semantic search — it finds relevant code by concept even when exact keywords don't match.
 
-1. **leann_search** (semantic search, if available)
-   - Best for: finding related code by concept, discovering implementation across files
+### Default workflow
+
+1. **leann_search** — START HERE for every search task
+   - Use for: initial exploration, finding related code by concept, discovering implementations across files
    - Example: "error handling patterns" finds try/catch, Result types, error middleware
-   - If not available: skip silently, proceed to next
+   - Example: "authentication flow" finds login, verify_token, session management
+   - Run 1-3 semantic queries with different phrasings for better coverage
+   - If unavailable: log "leann_search: unavailable" in report, fall back to step 2
 
-2. **Serena MCP tools** (structural search, if available)
-   - `mcp__serena__find_symbol` for symbol lookup
-   - `mcp__serena__find_referencing_symbols` for usage tracking
-   - `mcp__serena__search_for_pattern` for code patterns
-   - If not available: skip silently, proceed to next
+2. **Serena MCP tools** — for precise structural queries
+   - `mcp__serena__find_symbol` — when you know the exact symbol name
+   - `mcp__serena__find_referencing_symbols` — to trace who calls a function
+   - `mcp__serena__search_for_pattern` — for exact code patterns
+   - If unavailable: fall back to step 3
 
-3. **Grep/Glob** (keyword search, always available)
-   - Grep for content matching
-   - Glob for file pattern matching
+3. **Grep/Glob** — for exact keyword/pattern matches
+   - Grep for literal strings, regex patterns, exact identifiers
+   - Glob for file name patterns
 
-**Graceful Degradation**: If a tool is unavailable, skip it without error.
-All tools are optional except Read/Grep/Glob which are always available.
+### When to use what
+
+| Need | Tool |
+|------|------|
+| "How does X work?" | leann_search |
+| "Find code related to X" | leann_search |
+| "Where is function `foo`?" | Serena find_symbol → Grep |
+| "Who calls `bar()`?" | Serena find_referencing → Grep |
+| "Find all `import X`" | Grep |
+| "Find `*.test.ts` files" | Glob |
+
 After finding files via search, always use **Read** to analyze actual content.
+
+### Report search tools used
+
+In your report footer, include which search tools were actually used:
+```
+Search tools: leann_search ✅ | serena ✅ | grep ✅
+```
 
 ### Step 1: Read Entry Points
 - Start with main files mentioned in the request

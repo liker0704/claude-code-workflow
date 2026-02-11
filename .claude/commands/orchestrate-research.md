@@ -385,13 +385,19 @@ Include percentage: "Confidence: High (85%)"
 
 ## SEARCH STRATEGY
 
-Use this priority order:
-1. **leann_search** (semantic, if available) — best for concept/intent queries
-2. **mcp__serena__search_for_pattern** (structural, if available) — best for symbol/pattern queries
-3. **Grep/Glob** (keyword) — always available, use for exact matches
+**leann_search is your PRIMARY search tool.** Start every investigation with semantic search.
 
-If leann_search is NOT available, skip to step 2/3. Do not error.
-Combine results from multiple strategies for best coverage.
+1. **leann_search** — START HERE for every search task
+   - Use for: initial exploration, finding related code by concept
+   - Run 1-3 queries with different phrasings for coverage
+   - If unavailable: log "leann_search: unavailable", fall back to step 2
+2. **mcp__serena__search_for_pattern** — for precise symbol/pattern queries
+3. **Grep/Glob** — for exact keyword matches, literal strings, file patterns
+
+Report which tools were used in your output footer:
+```
+Search tools: leann_search ✅ | serena ✅ | grep ✅
+```
 
 ## COMPLETENESS CHECKLIST
 
