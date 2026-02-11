@@ -1,7 +1,7 @@
 ---
 name: codebase-analyzer
 description: Analyzes codebase implementation details. Call the codebase-analyzer agent when you need to find detailed information about specific components. As always, the more detailed your request prompt, the better! :)
-tools: Read, Grep, Glob, LS, Write, mcp__leann-server__mcp__leann-server__leann_search, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__search_for_pattern
+tools: Read, Grep, Glob, LS, Write, mcp__leann-server__leann_search, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__search_for_pattern
 model: sonnet
 ---
 
