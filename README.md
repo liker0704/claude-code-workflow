@@ -293,10 +293,10 @@ Covers: model selection strategy (Haiku/Sonnet/Opus by complexity), caching, que
 [LEANN](https://github.com/lemontheme/leann) provides AI-powered code search via MCP (Model Context Protocol).
 
 **How it works:**
-1. `install.sh` installs LEANN via `uv tool install leann-core --with leann`
+1. `install.sh` installs LEANN via `uv tool install leann-core --with leann --with "astchunk-extended[all]"`
 2. Registers `leann_mcp` as a user-scoped MCP server
-3. During `/orchestrate-research`, the EnsureIndex step builds a project index: `leann build {name} --docs $(git ls-files)`
-4. Agents use `leann_search` for semantic queries alongside traditional grep
+3. During `/orchestrate-research`, the EnsureIndex step builds a project index: `leann build {name} --use-ast-chunking --docs $(git ls-files)`
+4. Agents use `mcp__leann-server__leann_search` as primary search tool alongside grep
 
 **Two MCP tools:**
 - `leann_search` — natural language code search ("how does authentication work?")

@@ -195,8 +195,13 @@ else
             echo -e "  ${YELLOW}⊘${NC} Skipping LEANN (use --no-leann to suppress this warning)"
         else
             echo -e "  ${BLUE}Installing LEANN...${NC}"
-            if uv tool install leann-core --with leann 2>/dev/null; then
+            if uv tool install leann-core --with leann --with "astchunk-extended[all]" 2>/dev/null; then
                 echo -e "  ${GREEN}✓${NC} LEANN installed"
+
+                # Patch leann CODE_EXTENSIONS for additional AST languages
+                uv tool run --from leann-core python -c "from astchunk.patch_leann import apply; apply(verbose=False)" 2>/dev/null \
+                    && echo -e "  ${GREEN}✓${NC} AST chunking: 15 languages enabled" \
+                    || echo -e "  ${YELLOW}⚠${NC} AST chunking patch skipped"
 
                 # Verify binary is callable
                 if command -v leann_mcp &> /dev/null; then

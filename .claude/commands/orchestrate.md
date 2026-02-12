@@ -57,15 +57,15 @@ If user approves (or default Y), run via Bash with 3-step fallback:
 
 **Step 1**: GPU (default):
 ```bash
-leann build {project-name} --docs $(git ls-files)
+leann build {project-name} --use-ast-chunking --docs $(git ls-files)
 ```
 **Step 2**: If CUDA OOM → retry with anti-fragmentation:
 ```bash
-PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True leann build {project-name} --docs $(git ls-files)
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True leann build {project-name} --use-ast-chunking --docs $(git ls-files)
 ```
 **Step 3**: If still fails → CPU fallback:
 ```bash
-CUDA_VISIBLE_DEVICES="" leann build {project-name} --docs $(git ls-files)
+CUDA_VISIBLE_DEVICES="" leann build {project-name} --use-ast-chunking --docs $(git ls-files)
 ```
 Then show: `LEANN: index built, ready`
 
