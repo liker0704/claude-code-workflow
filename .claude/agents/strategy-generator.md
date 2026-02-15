@@ -1,7 +1,7 @@
 ---
 name: strategy-generator
 description: Generates 2-3 fundamentally different implementation strategies for a task. Use for complexity >= 4 tasks requiring architectural decisions.
-tools: Read, Grep, Glob
+tools: Read, Write, Grep, Glob
 model: sonnet
 ---
 
