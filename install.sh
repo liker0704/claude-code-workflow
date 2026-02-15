@@ -199,7 +199,7 @@ else
                 echo -e "  ${GREEN}✓${NC} LEANN installed"
 
                 # Patch leann CODE_EXTENSIONS for additional AST languages
-                uv tool run --from leann-core python -c "from astchunk.patch_leann import apply; apply(verbose=False)" 2>/dev/null \
+                ~/.local/share/uv/tools/leann-core/bin/python -c "from astchunk.patch_leann import apply; apply(verbose=False)" 2>/dev/null \
                     && echo -e "  ${GREEN}✓${NC} AST chunking: 15 languages enabled" \
                     || echo -e "  ${YELLOW}⚠${NC} AST chunking patch skipped"
 
