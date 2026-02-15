@@ -338,6 +338,12 @@ When spawned by an orchestrator:
 - {Missing security aspect 1}
 - {Missing security aspect 2}
 
+### Confidence
+Score: {0.0-1.0}
+Factors:
+- {[+] or [-]} {factor}
+- {[+] or [-]} {factor}
+
 ### Checklist Summary
 | Category | Status |
 |----------|--------|
@@ -367,6 +373,8 @@ When spawned by an orchestrator:
 
 [Full Report: {output_file}]
 ```
+
+0.9+ = full threat model, all vectors assessed. 0.7-0.89 = most vectors assessed. 0.5-0.69 = partial assessment. <0.5 = critical areas unassessed.
 
 ---
 

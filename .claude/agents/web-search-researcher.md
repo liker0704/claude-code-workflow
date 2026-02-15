@@ -137,7 +137,7 @@ topics_covered:
   - <topic1>
   - <topic2>
 search_queries_used: <count>
-confidence: high | medium | low
+confidence: {0.0-1.0}
 ---
 ```
 
@@ -168,9 +168,17 @@ The orchestrator will NOT read your report file — use your return summary inst
 - Libraries to consider: {list}
 - Patterns from external sources: {list}
 
+### Confidence
+Score: {0.0-1.0}
+Factors:
+- {[+] or [-]} {factor}
+- {[+] or [-]} {factor}
+
 ### Issues
 {Any problems encountered, conflicting info, or "None"}
 ```
+
+**Confidence guidance**: 0.9+ = multiple quality sources agree, recent and relevant. 0.7-0.89 = sources found but some gaps or conflicts. 0.5-0.69 = limited sources, partial coverage. <0.5 = no reliable sources found.
 
 ### Error Handling
 

@@ -157,6 +157,14 @@ For EVERY finding:
 |---------------|-------------|-------------|
 | {their scale} | {our scale} | {yes/partial/no} |
 
+### Confidence
+Score: {0.0-1.0}
+Factors:
+- {[+] or [-]} {factor}
+- {[+] or [-]} {factor}
+
 ### Gaps
 {Similar problems that haven't been publicly documented}
 ```
+
+**Confidence guidance**: 0.9+ = multiple quality sources agree, recent and relevant. 0.7-0.89 = sources found but some gaps or conflicts. 0.5-0.69 = limited sources, partial coverage. <0.5 = no reliable sources found.

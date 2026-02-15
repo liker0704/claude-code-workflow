@@ -181,7 +181,7 @@ categories:
   config: <count>
   docs: <count>
   types: <count>
-confidence: high | medium | low
+confidence: {0.0-1.0}
 ---
 ```
 
@@ -209,9 +209,17 @@ The orchestrator will NOT read your report file — use your return summary inst
 - Key directories: {list}
 - Naming patterns observed: {patterns}
 
+### Confidence
+Score: {0.0-1.0}
+Factors:
+- {[+] or [-]} {factor}
+- {[+] or [-]} {factor}
+
 ### Issues
 {Any problems encountered, or "None"}
 ```
+
+**Confidence guidance**: 0.9+ = all relevant files found, patterns clear. 0.7-0.89 = most files found, some dirs unexplored. 0.5-0.69 = partial results. <0.5 = search failed.
 
 ### Error Handling
 

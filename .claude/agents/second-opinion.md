@@ -55,7 +55,7 @@ Verify independently using your knowledge and web search:
 - Judge purely on technical merit
 - Flag anything that "sounds right but might be wrong"
 - Be specific about what you verified and how
-- Rate confidence: HIGH (80-100%) | MEDIUM (50-79%) | LOW (<50%)
+- Rate confidence as numeric score 0.0-1.0 in your return summary
 - Produce 3-7 specific observations (verified claims + concerns)
 
 ## Output Format
@@ -65,28 +65,37 @@ Write validation to file if `output_file` provided, then return summary to orche
 ### Return Summary (for orchestrator)
 
 ```markdown
-## Agent Summary
-Type: reviewer
-Status: SUCCESS | FAILED
-Duration: Xm
+## Return: second-opinion
 
-## Output
-Verdict: VALIDATED | CONCERNS
+### Status: SUCCESS | FAILED
+
+### Summary (2-3 sentences)
+{Brief overview of validation findings and verdict}
+
+### Verdict
+Result: VALIDATED | CONCERNS
 Claims verified: {count}
 Claims failed: {count}
-Confidence: HIGH | MEDIUM | LOW
 
-## For Dependents
+### For Dependents
 Technical issues to fix before implementation:
 - {failed claim 1 with brief reason}
 - {failed claim 2 with brief reason}
 (or "None - plan validated" if VALIDATED)
 
-## Issues
+### Confidence
+Score: {0.0-1.0}
+Factors:
+- {[+] or [-]} {factor}
+- {[+] or [-]} {factor}
+
+### Issues
 {any problems during validation, or None}
 
 [Full: {output_file if provided}]
 ```
+
+**Confidence guidance**: 0.9+ = all claims independently verified with evidence. 0.7-0.89 = most claims verified, some assumed. 0.5-0.69 = partial verification. <0.5 = verification incomplete, limited sources.
 
 ### Full Report Format (for file)
 

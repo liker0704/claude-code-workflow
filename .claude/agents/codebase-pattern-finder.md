@@ -256,7 +256,7 @@ categories:
   data: <count>
   component: <count>
   testing: <count>
-confidence: high | medium | low
+confidence: {0.0-1.0}
 ---
 ```
 
@@ -278,6 +278,12 @@ The orchestrator will NOT read your report file — use your return summary inst
 - {pattern2}: {file:line} - {brief description}
 - {pattern3}: {file:line} - {brief description}
 
+### Confidence
+Score: {0.0-1.0}
+Factors:
+- {[+] or [-]} {factor}
+- {[+] or [-]} {factor}
+
 ### For Dependents
 - Recommended pattern to follow: {which one and why}
 - Code template location: {file:lines}
@@ -286,6 +292,8 @@ The orchestrator will NOT read your report file — use your return summary inst
 ### Issues
 {Any problems encountered, or "None"}
 ```
+
+0.9+ = all patterns documented, high consistency. 0.7-0.89 = major patterns found. 0.5-0.69 = patterns found but uncertain. <0.5 = too few files.
 
 ### Error Handling
 

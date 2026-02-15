@@ -19,6 +19,15 @@ ORCHESTRATOR_HOOK = {
     }]
 }
 
+STATS_COLLECTOR_HOOK = {
+    "matcher": "Write",
+    "hooks": [{
+        "type": "command",
+        "command": "python3 ~/.claude/hooks/stats-collector.py",
+        "timeout": 10000
+    }]
+}
+
 SESSION_HOOKS = {
     "SessionStart": [{
         "hooks": [{
@@ -117,6 +126,21 @@ def main():
     if not session_end_exists:
         settings["hooks"]["SessionEnd"].extend(SESSION_HOOKS["SessionEnd"])
         changes.append("SessionEnd (persist state)")
+
+    # Add PostToolUse hook for stats collection
+    if "PostToolUse" not in settings["hooks"]:
+        settings["hooks"]["PostToolUse"] = []
+
+    stats_exists = False
+    for hook in settings["hooks"]["PostToolUse"]:
+        for h in hook.get("hooks", []):
+            if "stats-collector.py" in h.get("command", ""):
+                stats_exists = True
+                break
+
+    if not stats_exists:
+        settings["hooks"]["PostToolUse"].append(STATS_COLLECTOR_HOOK)
+        changes.append("PostToolUse (stats collector)")
 
     # Report results
     if not changes:

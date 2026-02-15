@@ -238,7 +238,7 @@ files_analyzed: <count>
 symbols_traced: <count>
 data_flows_documented: <count>
 patterns_identified: <list>
-confidence: high | medium | low
+confidence: {0.0-1.0}
 ---
 ```
 
@@ -262,6 +262,12 @@ The orchestrator will NOT read your report file — use your return summary inst
 
 ### Data Flow
 {Brief description of main data flow}
+
+### Confidence
+Score: {0.0-1.0}
+Factors:
+- {[+] or [-]} {factor}
+- {[+] or [-]} {factor}
 
 ### For Dependents
 - Key functions: {list with signatures}
@@ -287,6 +293,8 @@ The orchestrator will NOT read your report file — use your return summary inst
 ### Issues
 {Any problems encountered, or "None"}
 ```
+
+0.9+ = full data flow traced, all symbols resolved. 0.7-0.89 = main flow traced, some branches unresolved. 0.5-0.69 = partial trace. <0.5 = entry points unclear.
 
 ### Error Handling
 

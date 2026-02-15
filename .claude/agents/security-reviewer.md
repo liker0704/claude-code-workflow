@@ -625,6 +625,12 @@ When spawned by an orchestrator:
 ### Overall Risk Level
 CRITICAL | HIGH | MEDIUM | LOW
 
+### Confidence
+Score: {0.0-1.0}
+Factors:
+- {[+] or [-]} {factor}
+- {[+] or [-]} {factor}
+
 ### Immediate Actions Required
 1. {action}
 2. {action}
@@ -641,6 +647,8 @@ CRITICAL | HIGH | MEDIUM | LOW
 ### Blocked Issues
 {Any issues that prevented complete review, or "None"}
 ```
+
+0.9+ = full code audit, all findings verified. 0.7-0.89 = most code reviewed. 0.5-0.69 = partial review. <0.5 = review incomplete.
 
 ---
 

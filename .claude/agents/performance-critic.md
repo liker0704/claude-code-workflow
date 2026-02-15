@@ -101,10 +101,18 @@ Top 3 Issues:
 2. [{Severity}] {Title} - {One-line description}
 3. [{Severity}] {Title} - {One-line description}
 
+Confidence:
+Score: {0.0-1.0}
+Factors:
+- {[+] or [-]} {factor}
+- {[+] or [-]} {factor}
+
 Recommendation: [APPROVE|REQUEST_CHANGES|BLOCK]
 
 Full report available at: [path if saved to file]
 ```
+
+0.9+ = all bottlenecks identified with evidence. 0.7-0.89 = major bottlenecks found. 0.5-0.69 = partial analysis. <0.5 = analysis inconclusive.
 
 ### Recommendation Guidelines
 

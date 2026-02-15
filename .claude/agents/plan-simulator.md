@@ -330,6 +330,12 @@ When spawned by an orchestrator, return a concise summary:
 2. {issue} - {why it matters}
 3. {issue} - {why it matters}
 
+### Confidence
+Score: {0.0-1.0}
+Factors:
+- {[+] or [-]} {factor}
+- {[+] or [-]} {factor}
+
 ### Immediate Actions Required
 1. {action}
 2. {action}
@@ -345,6 +351,8 @@ When spawned by an orchestrator, return a concise summary:
 ---
 Full report: {absolute_path_to_output_file}
 ```
+
+0.9+ = all scenarios tested, no gaps. 0.7-0.89 = most scenarios tested. 0.5-0.69 = limited scenarios. <0.5 = simulation blocked/incomplete.
 
 ## Important Principles
 

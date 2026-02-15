@@ -181,6 +181,12 @@ When called from orchestrator, return:
 - {reason 2 - based on research findings}
 - {reason 3 - based on trade-off analysis}
 
+### Confidence
+Score: {0.0-1.0}
+Factors:
+- {[+] or [-]} {factor}
+- {[+] or [-]} {factor}
+
 ### Key Trade-offs
 | Factor | Recommended | Alternative(s) |
 |--------|-------------|----------------|
@@ -195,6 +201,8 @@ When called from orchestrator, return:
 ### Full Report Location
 {path to detailed strategy analysis file}
 ```
+
+0.9+ = all strategies deeply analyzed with evidence. 0.7-0.89 = strategies compared, some assumptions. 0.5-0.69 = limited analysis. <0.5 = insufficient data.
 
 ---
 

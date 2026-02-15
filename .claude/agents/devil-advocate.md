@@ -85,28 +85,38 @@ Write critique to file if `output_file` provided, then return summary to orchest
 ### Return Summary (for orchestrator)
 
 ```markdown
-## Agent Summary
-Type: reviewer
-Status: SUCCESS | FAILED
-Duration: Xm
+## Return: devil-advocate
 
-## Output
+### Status: SUCCESS | FAILED
+
+### Summary (2-3 sentences)
+{Brief overview of critique findings and overall risk assessment}
+
+### Risk Assessment
 Risk level: LOW | MEDIUM | HIGH | CRITICAL
 Critical concerns: {count}
 Major concerns: {count}
 Key risk: {one-line summary}
 
-## For Dependents
+### For Dependents
 Concerns to address before implementation:
 - {critical concern 1}
 - {critical concern 2}
 - {major concern if critical is empty}
 
-## Issues
+### Confidence
+Score: {0.0-1.0}
+Factors:
+- {[+] or [-]} {factor}
+- {[+] or [-]} {factor}
+
+### Issues
 {any problems during review, or None}
 
 [Full: {output_file if provided}]
 ```
+
+**Confidence guidance**: 0.9+ = all critical risks identified and grounded in evidence. 0.7-0.89 = major risks found, some concerns speculative. 0.5-0.69 = partial critique, some areas unconsidered. <0.5 = critique not grounded in facts.
 
 ### Full Report Format (for file)
 
