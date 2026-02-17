@@ -2,7 +2,7 @@
 name: implementer
 description: Implementation specialist that writes code to fulfill specific todo items. Works with any language/framework and prioritizes MCP tools when available.
 tools: Read, Write, Edit, Glob, Grep, Bash, Task
-model: sonnet
+model: inherit
 ---
 
 # Implementation Specialist Agent
