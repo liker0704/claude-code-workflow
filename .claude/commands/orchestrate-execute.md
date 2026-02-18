@@ -188,6 +188,17 @@ After batch review is APPROVED, run BATCH GATE verification:
 
 **DO NOT proceed to next batch until BATCH GATE passes.**
 
+### Batch Commit (AFTER GATE PASSES)
+
+After batch review APPROVED + BATCH GATE PASS, commit all changes:
+
+```bash
+git add -A
+git commit -m "feat({task-slug}): batch {N} — {1-line summary of completed tasks}"
+```
+
+**This is mandatory.** Every approved batch must be committed before starting the next one.
+
 ## Step 1: Validate Task
 
 ```
@@ -203,6 +214,33 @@ Create: execution/ directory if missing
 **If `complete`:** Offer view summary/re-execute/verify/archive
 **If `plan-complete`:** Proceed to Step 3
 **Otherwise:** Error, suggest appropriate phase
+
+## Step 2.5: Branch Management
+
+**For new features or large changes, create a dedicated branch.**
+
+Check if current branch is `main` (or `master`):
+
+```bash
+current_branch=$(git branch --show-current)
+```
+
+**If on main/master**, create and switch to a feature branch:
+
+```bash
+git checkout -b feat/{task-slug}
+```
+
+Show:
+```
+Created branch: feat/{task-slug}
+All work will be committed here. Merge to main after completion.
+```
+
+**If already on a non-main branch**, stay on it:
+```
+Working on branch: {current_branch}
+```
 
 ## Step 3: Initialize Execution
 
