@@ -194,8 +194,21 @@ After batch review APPROVED + BATCH GATE PASS, commit all changes:
 
 ```bash
 git add -A
-git commit -m "feat({task-slug}): batch {N} — {1-line summary of completed tasks}"
+git commit -m "{type}({scope}): {what was done}"
 ```
+
+**Commit message rules:**
+- Write as a human developer would — no "batch N", no automation markers
+- Use conventional commits: `feat`, `fix`, `refactor`, `test`, `chore`
+- Scope = affected module/component, not task-slug
+- Describe the actual change, not the process
+- One commit per batch, covering all tasks in that batch
+
+**Examples:**
+- `feat(auth): add JWT token refresh and session management`
+- `refactor(api): extract validation middleware, add error types`
+- `fix(db): handle connection pool exhaustion on high load`
+- `feat(ui): implement dark mode with system preference detection`
 
 **This is mandatory.** Every approved batch must be committed before starting the next one.
 
