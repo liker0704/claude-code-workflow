@@ -67,7 +67,8 @@ Parameters:
   subagent_type: "reviewer"
   prompt: |
     Review task-{XX}: tmp/.orchestrate/{task-slug}/execution/task-{XX}-{name}.md
-    Checklist: patterns, bugs, error handling, tests, security
+    Checklist: patterns, bugs, error handling, tests, security, architecture alignment
+    {IF Arch ref != "none":}Architecture check: Read sections {Arch ref list} from architecture.md — verify alignment.{END IF}
     Output to: tmp/.orchestrate/{task-slug}/execution/task-{XX}-review.md
     Verdict: APPROVED | NEEDS_CHANGES | BLOCKED
   description: "Review task-{XX}"
@@ -311,6 +312,7 @@ Task is ready when: status=pending, all dependencies complete, not blocked
 
 BEFORE spawning implementer, collect from all dependencies:
 - files_created, exports, interfaces, usage_example
+- arch_ref: from task "Arch ref" field (skip if "none" or architecture.md missing)
 
 ### Implementer Template
 
@@ -329,6 +331,13 @@ Parameters:
     ## FROM DEPENDENCIES (CRITICAL)
     {For each dep: files created, exports, interfaces, usage}
     USE EXACTLY these interfaces.
+
+    ## ARCHITECTURE CONTEXT
+    {IF Arch ref != "none" AND architecture.md exists:}
+    Read ONLY these sections from architecture.md:
+    {list section headers from Arch ref field}
+    Your implementation MUST align with these architectural decisions.
+    {ELSE: omit this entire section}
 
     ## YOU MUST PRODUCE (CONTRACT)
     | Type | Name | Details |
@@ -531,6 +540,7 @@ FOR cycle IN 1..3:
          ## FIX MODE: task-{XX} (Auto-Debug Cycle {cycle}/3)
 
          Original task: {task description}
+         {IF Arch ref != "none":}Architecture: Read {Arch ref sections} from architecture.md before fixing.{END IF}
 
          **DEBUGGER RECOMMENDATIONS**: execution/task-{XX}-debug-cycle{cycle}.md
 

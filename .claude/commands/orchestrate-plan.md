@@ -560,6 +560,7 @@ Break each phase into atomic tasks with:
 - Single responsibility, clear deliverable, independently verifiable
 - 5-30 minutes of agent work
 - Assignable to one agent type
+- Arch ref: list architecture.md section headers relevant to THIS task (use "none" if no architecture.md)
 
 **Types:** implement, modify, test, config, docs
 **Risk levels:** high (auth, security, payments), medium (features, API, refactoring), low (docs, config, styling)
@@ -672,6 +673,7 @@ Total tasks: {N}
 - **Description**: [details]
 - **Files**: `path/file.py` (create/modify)
 - **Details**: [requirements]
+- **Arch ref**: `## Section`, `### Subsection` | none
 - **Depends on**: none
 - **Blocks**: task-02, task-03
 - **Agent**: implementer
