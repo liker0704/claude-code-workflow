@@ -3,6 +3,15 @@ name: implementer
 description: Implementation specialist that writes code to fulfill specific todo items. Works with any language/framework and prioritizes MCP tools when available.
 tools: Read, Write, Edit, Glob, Grep, Bash, Task
 model: inherit
+maxTurns: 50
+isolation: worktree
+hooks:
+  PostToolUse:
+    - matcher: "Write|Edit"
+      hooks:
+        - type: command
+          command: "python3 ~/.claude/hooks/format-on-write.py"
+          timeout: 10000
 ---
 
 # Implementation Specialist Agent
@@ -116,12 +125,15 @@ Before reporting SUCCESS, the implementer MUST verify the implementation works:
 3. **Quick functional test**: Run a minimal test to verify core functionality
 4. **Existing tests**: If tests exist for modified code, run them
 
-### Self-Fix Cycle (max 2 attempts)
+### Verification Loop (max 3 attempts)
 If self-test fails:
-1. Analyze error
+1. Analyze the error — identify root cause, not symptoms
 2. Fix the issue
-3. Re-run self-test
-4. If still failing after 2 attempts → Report BLOCKED
+3. Re-run ALL self-test checks
+4. If still failing → iterate (attempt 2, attempt 3)
+5. If still failing after 3 attempts → Report IMPLEMENTATION BLOCKED with all 3 attempt summaries
+
+**This loop is your MOST IMPORTANT quality mechanism.** (Per Boris Cherny: "Give Claude a way to verify its own work → 2-3x quality.")
 
 ### Self-Test Report
 Include in SUCCESS response:
@@ -131,7 +143,7 @@ Include in SUCCESS response:
 - Imports: PASS/FAIL
 - Functional: PASS/FAIL (describe what was tested)
 - Existing tests: PASS/FAIL/SKIPPED (N tests)
-- Self-fix attempts: 0/1/2
+- Self-fix attempts: 0/1/2/3
 ```
 
 **CRITICAL: Do NOT report SUCCESS without passing self-test. A SUCCESS without self-test is considered INCOMPLETE.**

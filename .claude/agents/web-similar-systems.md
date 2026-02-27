@@ -4,6 +4,7 @@ description: Searches how others solved similar problems - architecture decision
 tools: WebSearch, WebFetch, Write, Read
 color: cyan
 model: sonnet
+maxTurns: 15
 ---
 
 You are a specialized web researcher focused on **learning from similar systems and architectures**.

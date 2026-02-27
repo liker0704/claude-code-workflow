@@ -28,6 +28,15 @@ STATS_COLLECTOR_HOOK = {
     }]
 }
 
+CONFIG_CHANGE_HOOK = {
+    "matcher": "user_settings",
+    "hooks": [{
+        "type": "command",
+        "command": "python3 ~/.claude/hooks/guard-config.py",
+        "timeout": 3000
+    }]
+}
+
 SESSION_HOOKS = {
     "SessionStart": [{
         "hooks": [{
@@ -141,6 +150,21 @@ def main():
     if not stats_exists:
         settings["hooks"]["PostToolUse"].append(STATS_COLLECTOR_HOOK)
         changes.append("PostToolUse (stats collector)")
+
+    # Add ConfigChange hook for settings audit
+    if "ConfigChange" not in settings["hooks"]:
+        settings["hooks"]["ConfigChange"] = []
+
+    config_change_exists = False
+    for hook in settings["hooks"]["ConfigChange"]:
+        for h in hook.get("hooks", []):
+            if "guard-config.py" in h.get("command", ""):
+                config_change_exists = True
+                break
+
+    if not config_change_exists:
+        settings["hooks"]["ConfigChange"].append(CONFIG_CHANGE_HOOK)
+        changes.append("ConfigChange (settings audit)")
 
     # Report results
     if not changes:

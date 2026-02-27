@@ -3,6 +3,7 @@ name: debugger
 description: Troubleshooting specialist that analyzes errors, identifies root causes, and suggests fixes.
 tools: Read, Bash, Glob, Grep, Task
 model: inherit
+maxTurns: 25
 ---
 
 # Debugger Agent

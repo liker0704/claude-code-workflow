@@ -288,6 +288,22 @@ grep -rn --include="*.py" --exclude="*test*.py" "print(" . | grep -v "__main__"
 - WARN: debug statements found (show file:line, but don't fail)
 - SKIP: not applicable to project type
 
+#### Check 7: AI Security Scan (optional, if /security-review available)
+
+Only run if:
+- Project has significant code changes (not just config/docs)
+- The built-in `/security-review` command is available (CC 2.1.49+)
+
+If available:
+1. Run `/security-review` on changed files
+2. Parse output for severity levels
+3. Status mapping:
+   - No findings → PASS
+   - Low/Medium findings → WARN (include details)
+   - High/Critical findings → FAIL
+
+If `/security-review` is not available → SKIP
+
 ### Step 4: Generate Report
 
 After all checks complete, generate a summary table:
@@ -303,6 +319,7 @@ After all checks complete, generate a summary table:
 | Tests | {PASS/FAIL/SKIP} | {summary or error} |
 | Secrets | {PASS/FAIL/SKIP} | {summary or error} |
 | Debug Statements | {PASS/WARN/SKIP} | {summary or error} |
+| Security Scan | {PASS/FAIL/WARN/SKIP} | {summary or error} |
 
 ---
 

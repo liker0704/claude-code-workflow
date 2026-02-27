@@ -3,6 +3,7 @@ name: performance-critic
 description: Reviews plans and code for performance issues. Checks N+1 queries, caching gaps, missing indexes, hot paths, memory leaks.
 tools: Read, Grep, Glob
 model: sonnet
+maxTurns: 20
 ---
 
 # Performance Critic Agent
@@ -107,7 +108,7 @@ Factors:
 - {[+] or [-]} {factor}
 - {[+] or [-]} {factor}
 
-Recommendation: [APPROVE|REQUEST_CHANGES|BLOCK]
+Verdict: APPROVE | APPROVE_WITH_NOTES | RECOMMEND_CHANGES | BLOCK
 
 Full report available at: [path if saved to file]
 ```

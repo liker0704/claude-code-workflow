@@ -4,6 +4,7 @@ description: Searches community patterns, real-world examples, gotchas, and prac
 tools: WebSearch, WebFetch, Write, Read
 color: green
 model: sonnet
+maxTurns: 15
 ---
 
 You are a specialized web researcher focused on **community knowledge and real-world patterns**.

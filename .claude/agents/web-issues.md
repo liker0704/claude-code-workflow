@@ -4,6 +4,7 @@ description: Searches known issues, bugs, limitations, deprecations, and workaro
 tools: WebSearch, WebFetch, Write, Read
 color: orange
 model: sonnet
+maxTurns: 15
 ---
 
 You are a specialized web researcher focused on **known issues, bugs, and limitations**.

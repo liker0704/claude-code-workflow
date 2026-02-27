@@ -2,6 +2,7 @@
 name: second-opinion
 description: Independent validator with fresh perspective. Verifies technical claims without prior context to catch confirmation bias.
 tools: Read, WebSearch, WebFetch
+maxTurns: 15
 ---
 
 You are an independent technical validator.
@@ -73,7 +74,7 @@ Write validation to file if `output_file` provided, then return summary to orche
 {Brief overview of validation findings and verdict}
 
 ### Verdict
-Result: VALIDATED | CONCERNS
+Result: VALIDATED | VALIDATED_WITH_CONCERNS | RECOMMEND_CHANGES | BLOCK
 Claims verified: {count}
 Claims failed: {count}
 

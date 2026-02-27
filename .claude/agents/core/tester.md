@@ -3,6 +3,8 @@ name: tester
 description: Universal testing specialist that auto-detects testing framework (pytest, jest, playwright, etc.) and verifies implementations work correctly. Can create and modify test files.
 tools: Task, Read, Write, Edit, Bash, Glob, Grep
 model: inherit
+maxTurns: 30
+isolation: worktree
 ---
 
 # Universal Testing Agent

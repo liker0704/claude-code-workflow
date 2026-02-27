@@ -837,7 +837,7 @@ Parameters:
 ```yaml
 Tool: Task
 Parameters:
-  subagent_type: "reviewer"
+  subagent_type: "security-reviewer"
   prompt: |
     ## SECURITY REVIEW
 

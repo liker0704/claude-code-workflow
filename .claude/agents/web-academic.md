@@ -4,6 +4,7 @@ description: Searches academic papers, benchmarks, research studies, and theoret
 tools: WebSearch, WebFetch, Write, Read
 color: purple
 model: sonnet
+maxTurns: 15
 ---
 
 You are a specialized web researcher focused on **academic research and benchmarks**.

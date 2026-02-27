@@ -315,6 +315,48 @@ Parameters:
 [Continue to Scoring]
 ```
 
+## Step 5.10b: Critic Iteration Loop
+
+For each surviving plan:
+
+Set iteration = 0, max_iterations = 2.
+
+### 5.10b.1: Collect Verdicts
+
+Collect all 4 critic verdicts (from Step 5.10 results).
+
+### 5.10b.2: Check Convergence
+
+- **IF any critic verdict = BLOCK:**
+  - IF iteration < max_iterations:
+    - Spawn architect to revise plan addressing ONLY the BLOCK concerns:
+      ```yaml
+      Tool: Task
+      Parameters:
+        subagent_type: "architect"
+        prompt: |
+          Revise plan to address these BLOCK concerns: {blocked_concerns}.
+          Plan: tmp/.orchestrate/{task-slug}/plan/plan-{N}.md
+          Tasks: tmp/.orchestrate/{task-slug}/plan/tasks-{N}.md
+          Keep all approved aspects unchanged. For each concern, explain how it's resolved.
+        description: "Revise plan {N} to address BLOCK concerns (iteration {iteration})"
+      ```
+    - Re-run ONLY the critics that issued BLOCK (save tokens)
+    - iteration += 1, go to 5.10b.1
+  - ELSE: Eliminate this plan (set status = NOT_READY, document elimination reasons)
+    ```
+    Plan {N} eliminated after {max_iterations} revision attempts.
+    Unresolved BLOCK concerns: {list}
+    ```
+
+- **IF all verdicts in {APPROVE, APPROVE_WITH_NOTES, RECOMMEND_CHANGES}:**
+  - Plan proceeds to confidence scoring (Step 5.11)
+  - RECOMMEND_CHANGES concerns are factored into the risk component of confidence score
+
+**Note:** In multi-plan mode, only BLOCK triggers revision. RECOMMEND_CHANGES is captured in confidence scoring instead.
+
+If zero plans survive after iteration loop, ABORT and report to user.
+
 ## Step 5.11: Confidence Scoring
 
 Calculate confidence score for each plan using formula:
@@ -763,32 +805,78 @@ Parameters:
   description: "Second Opinion validation"
 ```
 
-## Step 13: Present Final Plan
+## Step 13: Review Iteration Loop
+
+Set iteration = 0, max_iterations = 3.
+
+### 13.1: Collect Verdicts
+
+Collect verdicts from devil-advocate and second-opinion:
+- devil-advocate verdict: APPROVE | APPROVE_WITH_NOTES | RECOMMEND_CHANGES | BLOCK
+- second-opinion verdict: VALIDATED | VALIDATED_WITH_CONCERNS | RECOMMEND_CHANGES | BLOCK
+- Map: VALIDATED -> APPROVE, VALIDATED_WITH_CONCERNS -> APPROVE_WITH_NOTES
+
+### 13.2: Check Convergence
+
+- **IF all verdicts in {APPROVE, APPROVE_WITH_NOTES}** -> go to Step 14 (plan approved)
+
+- **IF any verdict = BLOCK AND iteration < max_iterations:**
+  - Show BLOCK concerns to user
+  - Spawn architect agent:
+    ```yaml
+    Tool: Task
+    Parameters:
+      subagent_type: "architect"
+      prompt: |
+        Revise this plan to address these specific concerns: {blocked_concerns}.
+        Plan: tmp/.orchestrate/{task-slug}/plan/plan.md
+        Tasks: tmp/.orchestrate/{task-slug}/plan/tasks.md
+        Keep all approved aspects unchanged. For each concern, explain how it's resolved.
+      description: "Revise plan to address BLOCK concerns (iteration {iteration})"
+    ```
+  - Replace plan.md with revised version
+  - Re-run devil-advocate + second-opinion on revised plan (pass previous feedback as context)
+  - iteration += 1, go to 13.1
+
+- **IF any verdict = RECOMMEND_CHANGES (no BLOCK):**
+  - Show concerns to user with options:
+    ```
+    ## Review Concerns (iteration {iteration})
+
+    {list of RECOMMEND_CHANGES concerns}
+
+    Options:
+    [Accept as-is] Proceed to approval
+    [Revise and re-review] Spawn architect to address concerns, then re-review
+    [Replan from scratch] Return to Step 6
+    ```
+  - [Accept as-is] -> go to Step 14
+  - [Revise and re-review] -> same as BLOCK flow above
+  - [Replan from scratch] -> go to Step 6
+
+### 13.3: Max Iterations Reached
+
+If iteration = max_iterations and unresolved BLOCKs remain:
 
 ```
-## Final Plan Review
+## Max Review Iterations Reached ({max_iterations})
 
-Task: {task-slug}
-Tasks: {N} total
+Unresolved BLOCK concerns:
+{list of unresolved concerns with details}
 
-### Analytical Review
-- Devil's Advocate: {addressed/dismissed X concerns}
-- Second Opinion: {VALIDATED/concerns addressed}
-
-Full plan: plan/plan.md
-Full tasks: plan/tasks.md
-
-[Approve] Start execution | [Modify] Changes needed | [Replan] Start over
+Options:
+[Force approve] Accept plan despite unresolved concerns
+[Replan from scratch] Return to Step 6
+[Abort task] Cancel this task
 ```
 
-## Step 14: Handle Approval
+## Step 14: Final Approval
 
-**On Approve:**
+**On Approve (from Step 13.2 convergence or Force approve):**
 1. Update `plan/plan.md` Status to `approved`
 2. Update `task.md` to `Status: plan-complete`, mark `[x] Plan`
 3. Show: `Plan complete. Run /orchestrate-execute {task-slug}`
 
-**On Modify:** Apply changes, re-run Devil's Advocate if significant
 **On Replan:** Return to Step 6
 
 ## Task Count Guidelines

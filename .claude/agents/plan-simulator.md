@@ -3,6 +3,7 @@ name: plan-simulator
 description: Tests implementation plans against multiple scenarios (happy path, edge cases, failure paths). Identifies gaps before implementation.
 tools: Read, Grep, Glob
 model: sonnet
+maxTurns: 20
 ---
 
 You are a plan stress-testing specialist focused on identifying gaps, edge cases, and failure scenarios in implementation plans before execution begins.

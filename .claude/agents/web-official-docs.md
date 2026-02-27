@@ -4,6 +4,7 @@ description: Searches official documentation, API references, migration guides, 
 tools: WebSearch, WebFetch, Write, Read
 color: blue
 model: sonnet
+maxTurns: 15
 ---
 
 You are a specialized web researcher focused **exclusively on official documentation sources**.
