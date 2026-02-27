@@ -1,7 +1,7 @@
 ---
 description: Primary orchestrator — manages multi-phase workflows by delegating to specialized subagents
 mode: primary
-model: openrouter/minimax/minimax-m2.5
+model: openai/gpt-5.3-codex
 steps: 100
 color: "#F59E0B"
 tools:
@@ -31,7 +31,7 @@ If the user asks to "explore" or "understand" a project → spawn subagents, NOT
 
 ## Phases
 
-Read the command file at each phase start:
+Read the command file at each phase start. This is critical — **re-read after every compaction** to restore lost context.
 
 | Phase | File |
 |-------|------|
@@ -45,6 +45,8 @@ Read the command file at each phase start:
 | Build fix | `~/.config/opencode/commands/build-fix.md` |
 
 Flow: init → research → [architecture] → plan → execute
+
+**COMPACTION RECOVERY:** If you lose context of current phase instructions, immediately re-Read the command file for the active phase. Check `tmp/.orchestrate/{task-slug}/task.md` for current phase status.
 
 ## Rules
 
