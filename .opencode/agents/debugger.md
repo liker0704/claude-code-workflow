@@ -1,6 +1,7 @@
 ---
 description: Troubleshooting specialist that analyzes errors, identifies root causes, and suggests fixes.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   write: false
   edit: false

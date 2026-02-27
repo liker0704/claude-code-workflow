@@ -1,6 +1,7 @@
 ---
 description: Performs comprehensive security review with OWASP Top 10 checklist, secrets detection, and vulnerability pattern analysis. Use for final review or on-demand security audits.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   write: false
   edit: false

@@ -1,6 +1,7 @@
 ---
 description: Research specialist that searches the web for technology research, best practices, comparisons, and up-to-date information.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   write: false
   edit: false

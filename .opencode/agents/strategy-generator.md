@@ -1,6 +1,7 @@
 ---
 description: Generates 2-3 fundamentally different implementation strategies for a task. Use for complexity >= 4 tasks requiring architectural decisions.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   bash: false
   task: false

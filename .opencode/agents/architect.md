@@ -1,6 +1,7 @@
 ---
 description: Design system and code architecture, create ADRs, diagrams, and design documents for architectural decisions and system planning.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   bash: false
   task: false

@@ -1,6 +1,7 @@
 ---
 description: Create comprehensive documentation including docstrings, API docs, README files, and feature documentation. Auto-detects language/framework style.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   bash: false
   task: false

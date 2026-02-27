@@ -1,6 +1,7 @@
 ---
 description: Tests implementation plans against multiple scenarios (happy path, edge cases, failure paths). Identifies gaps before implementation.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   write: false
   edit: false

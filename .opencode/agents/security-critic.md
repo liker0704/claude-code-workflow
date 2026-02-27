@@ -1,6 +1,7 @@
 ---
 description: Reviews plans and architecture for security issues at design level. Checks auth, secrets, SSRF, injection, rate limiting. Differs from security-reviewer which reviews code.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   write: false
   edit: false

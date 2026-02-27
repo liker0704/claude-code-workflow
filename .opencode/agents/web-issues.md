@@ -1,6 +1,7 @@
 ---
 description: Searches known issues, bugs, limitations, deprecations, and workarounds from GitHub issues and bug trackers. Use for complexity 3+ tasks to understand potential problems.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   bash: false
   task: false

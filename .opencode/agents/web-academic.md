@@ -1,6 +1,7 @@
 ---
 description: Searches academic papers, benchmarks, research studies, and theoretical foundations. Use for complexity 4-5 tasks requiring deep technical understanding.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   bash: false
   task: false

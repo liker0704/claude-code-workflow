@@ -1,6 +1,7 @@
 ---
 description: Educational agent that explains architectural decisions, design patterns, and SOLID principles with examples and practice exercises. Call this when you want to understand "why" and "how" technical decisions were made.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   write: false
   edit: false

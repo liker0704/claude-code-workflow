@@ -1,6 +1,7 @@
 ---
 description: Reviews plans and code for performance issues. Checks N+1 queries, caching gaps, missing indexes, hot paths, memory leaks.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   write: false
   edit: false

@@ -1,6 +1,7 @@
 ---
 description: Code review specialist that checks quality, security, best practices, and maintainability before commits.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   write: false
   edit: false

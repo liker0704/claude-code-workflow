@@ -1,6 +1,7 @@
 ---
 description: Critical reviewer that challenges plans and finds problems. Use before major decisions to catch blind spots.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   write: false
   edit: false

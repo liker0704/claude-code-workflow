@@ -1,6 +1,7 @@
 ---
 description: Create high-quality research prompts for external LLMs (Gemini/ChatGPT) when deep research, academic topics, or complex comparisons are needed.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   write: false
   edit: false

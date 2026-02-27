@@ -1,6 +1,7 @@
 ---
 description: Searches how others solved similar problems - architecture decisions, "how we built X" posts, open source implementations, and post-mortems. Use for complexity 4-5 tasks.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   bash: false
   task: false

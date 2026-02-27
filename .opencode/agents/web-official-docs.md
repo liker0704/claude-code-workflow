@@ -1,6 +1,7 @@
 ---
 description: Searches official documentation, API references, migration guides, and release notes. Use when you need authoritative technical information from official sources.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   bash: false
   task: false

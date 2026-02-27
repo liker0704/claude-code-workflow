@@ -1,6 +1,7 @@
 ---
 description: Implementation specialist that writes code to fulfill specific todo items. Works with any language/framework and prioritizes MCP tools when available.
 mode: subagent
+model: openai/gpt-5.3-codex
 steps: 50
 ---
 

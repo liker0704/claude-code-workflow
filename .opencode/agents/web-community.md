@@ -1,6 +1,7 @@
 ---
 description: Searches community patterns, real-world examples, gotchas, and practical solutions from Stack Overflow, dev blogs, and technical forums. Use when you need practical implementation insights.
 mode: subagent
+model: openai/gpt-5.3-codex
 tools:
   bash: false
   task: false
