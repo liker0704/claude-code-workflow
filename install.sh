@@ -371,9 +371,6 @@ changed = False
 # Add instructions
 instructions = config.get('instructions', [])
 rule_files = [
-    '~/.config/opencode/rules/security.md',
-    '~/.config/opencode/rules/coding-style.md',
-    '~/.config/opencode/rules/performance.md',
     '~/.config/opencode/orchestrator-rules.md',
 ]
 for rule in rule_files:
