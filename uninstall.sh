@@ -173,5 +173,110 @@ else
 fi
 
 echo
-echo -e "${GREEN}Uninstall complete.${NC}"
-echo -e "Restart Claude Code to apply changes."
+echo -e "${GREEN}Claude Code uninstall complete.${NC}"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OpenCode Uninstallation
+# ═══════════════════════════════════════════════════════════════════════════════
+
+OPENCODE_DIR="$HOME/.config/opencode"
+
+if [ -d "$OPENCODE_DIR/commands" ] || [ -d "$OPENCODE_DIR/agents" ]; then
+    echo
+    echo -e "${RED}╔═══════════════════════════════════════╗${NC}"
+    echo -e "${RED}║  OpenCode Workflow Uninstaller        ║${NC}"
+    echo -e "${RED}╚═══════════════════════════════════════╝${NC}"
+    echo
+
+    # Commands
+    echo -e "${BLUE}[1/7] Commands${NC}"
+    for cmd in orchestrate.md orchestrate-research.md orchestrate-architecture.md orchestrate-plan.md orchestrate-execute.md orchestrate-auto.md verify.md build-fix.md canary-agent-teams.md; do
+        remove_if_exists "$OPENCODE_DIR/commands/$cmd"
+    done
+
+    # Agents
+    echo -e "\n${BLUE}[2/7] Agents${NC}"
+    for agent in architect.md codebase-analyzer.md codebase-locator.md codebase-pattern-finder.md debugger.md devil-advocate.md documenter.md implementer.md orchestrator.md performance-critic.md plan-simulator.md research.md research-prompt.md reviewer.md second-opinion.md security-critic.md security-reviewer.md strategy-generator.md stuck.md teacher.md tester.md web-academic.md web-community.md web-issues.md web-official-docs.md web-search-researcher.md web-similar-systems.md; do
+        remove_if_exists "$OPENCODE_DIR/agents/$agent"
+    done
+
+    # Rules
+    echo -e "\n${BLUE}[3/7] Rules${NC}"
+    for rule in security.md coding-style.md performance.md; do
+        remove_if_exists "$OPENCODE_DIR/rules/$rule"
+    done
+
+    # Docs + orchestrator rules
+    echo -e "\n${BLUE}[4/7] Docs & Rules${NC}"
+    remove_if_exists "$OPENCODE_DIR/docs/orchestrate-file-formats.md"
+    remove_if_exists "$OPENCODE_DIR/orchestrator-rules.md"
+
+    # AGENTS.md
+    echo -e "\n${BLUE}[5/7] AGENTS.md${NC}"
+    remove_if_exists "$OPENCODE_DIR/AGENTS.md"
+
+    # Plugin
+    echo -e "\n${BLUE}[6/7] Plugin${NC}"
+    remove_if_exists "$OPENCODE_DIR/plugins/workflow-plugin.ts"
+
+    # Config cleanup
+    echo -e "\n${BLUE}[7/7] Config (opencode.json)${NC}"
+    if [ -f "$OPENCODE_DIR/opencode.json" ]; then
+        python3 -c "
+import json
+from pathlib import Path
+
+config_path = Path.home() / '.config' / 'opencode' / 'opencode.json'
+with open(config_path) as f:
+    config = json.load(f)
+
+changed = False
+
+# Remove instructions
+rule_files = [
+    '~/.config/opencode/rules/security.md',
+    '~/.config/opencode/rules/coding-style.md',
+    '~/.config/opencode/rules/performance.md',
+    '~/.config/opencode/orchestrator-rules.md',
+]
+instructions = config.get('instructions', [])
+new_instructions = [i for i in instructions if i not in rule_files]
+if len(new_instructions) != len(instructions):
+    config['instructions'] = new_instructions
+    changed = True
+if not config.get('instructions'):
+    config.pop('instructions', None)
+
+# Remove plugin from 'plugin' array
+plugin_list = config.get('plugin', [])
+new_plugin_list = [p for p in plugin_list if 'workflow-plugin' not in p]
+if len(new_plugin_list) != len(plugin_list):
+    config['plugin'] = new_plugin_list
+    changed = True
+if not config.get('plugin'):
+    config.pop('plugin', None)
+
+# Remove MCP servers added by workflow
+mcp = config.get('mcp', {})
+for srv in ['leann-server', 'context7', 'playwright']:
+    if srv in mcp:
+        del mcp[srv]
+        changed = True
+if not mcp:
+    config.pop('mcp', None)
+
+if changed:
+    with open(config_path, 'w') as f:
+        json.dump(config, f, indent=2)
+    print('Config cleaned')
+else:
+    print('No config changes needed')
+" 2>/dev/null && echo -e "  ${GREEN}✓${NC} Cleaned" || echo -e "  ${YELLOW}⊘${NC} Manual cleanup may be needed"
+    fi
+
+    echo
+    echo -e "${GREEN}OpenCode uninstall complete.${NC}"
+fi
+
+echo
+echo -e "Restart your coding tools to apply changes."

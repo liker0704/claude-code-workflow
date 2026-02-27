@@ -235,7 +235,218 @@ echo -e "  ${BLUE}/orchestrate-execute${NC} <slug>  - execution phase"
 echo
 echo -e "Restart Claude Code to apply changes."
 
+# Post-install validation
+if command -v claude &> /dev/null; then
+    AGENT_COUNT=$(claude agents 2>/dev/null | grep -c "^\s*-" 2>/dev/null || true)
+    AGENT_COUNT="${AGENT_COUNT##*$'\n'}"  # take last line only
+    if [ -n "$AGENT_COUNT" ] && [ "$AGENT_COUNT" -gt 0 ] 2>/dev/null; then
+        echo -e "  ${GREEN}✓${NC} Found $AGENT_COUNT registered agents"
+    fi
+fi
+
 if [ -d "$BACKUP_DIR" ]; then
     echo
     echo -e "${YELLOW}Backups saved in: $BACKUP_DIR${NC}"
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OpenCode Installation
+# ═══════════════════════════════════════════════════════════════════════════════
+
+if command -v opencode &> /dev/null; then
+    echo
+    echo -e "${BLUE}╔═══════════════════════════════════════╗${NC}"
+    echo -e "${BLUE}║  OpenCode Workflow Installation       ║${NC}"
+    echo -e "${BLUE}╚═══════════════════════════════════════╝${NC}"
+    echo
+
+    OPENCODE_DIR="$HOME/.config/opencode"
+    OPENCODE_BACKUP="$OPENCODE_DIR/.backup-$(date +%Y%m%d-%H%M%S)"
+
+    mkdir -p "$OPENCODE_DIR"
+
+    # 1. Orchestrator rules
+    echo -e "${BLUE}[1/8] Orchestrator Rules${NC}"
+    if [ "$UPGRADE_MODE" = true ]; then
+        copy_with_backup "$SCRIPT_DIR/.opencode/orchestrator-rules.md" "$OPENCODE_DIR/orchestrator-rules.md"
+    else
+        copy_if_not_exists "$SCRIPT_DIR/.opencode/orchestrator-rules.md" "$OPENCODE_DIR/orchestrator-rules.md" || true
+    fi
+
+    # 2. Commands
+    echo -e "\n${BLUE}[2/8] Commands${NC}"
+    mkdir -p "$OPENCODE_DIR/commands"
+    for cmd in "$SCRIPT_DIR/.opencode/commands"/*.md; do
+        if [ -f "$cmd" ]; then
+            if [ "$UPGRADE_MODE" = true ]; then
+                copy_with_backup "$cmd" "$OPENCODE_DIR/commands/$(basename "$cmd")"
+            else
+                copy_if_not_exists "$cmd" "$OPENCODE_DIR/commands/$(basename "$cmd")" || true
+            fi
+        fi
+    done
+
+    # 3. Agents (flat directory)
+    echo -e "\n${BLUE}[3/8] Agents${NC}"
+    mkdir -p "$OPENCODE_DIR/agents"
+    for agent in "$SCRIPT_DIR/.opencode/agents"/*.md; do
+        if [ -f "$agent" ]; then
+            if [ "$UPGRADE_MODE" = true ]; then
+                copy_with_backup "$agent" "$OPENCODE_DIR/agents/$(basename "$agent")"
+            else
+                copy_if_not_exists "$agent" "$OPENCODE_DIR/agents/$(basename "$agent")" || true
+            fi
+        fi
+    done
+
+    # 4. Rules
+    echo -e "\n${BLUE}[4/8] Rules${NC}"
+    mkdir -p "$OPENCODE_DIR/rules"
+    for rule in "$SCRIPT_DIR/.opencode/rules"/*.md; do
+        if [ -f "$rule" ]; then
+            if [ "$UPGRADE_MODE" = true ]; then
+                copy_with_backup "$rule" "$OPENCODE_DIR/rules/$(basename "$rule")"
+            else
+                copy_if_not_exists "$rule" "$OPENCODE_DIR/rules/$(basename "$rule")" || true
+            fi
+        fi
+    done
+
+    # 5. Docs
+    echo -e "\n${BLUE}[5/8] Docs${NC}"
+    mkdir -p "$OPENCODE_DIR/docs"
+    for doc in "$SCRIPT_DIR/.opencode/docs"/*.md; do
+        if [ -f "$doc" ]; then
+            if [ "$UPGRADE_MODE" = true ]; then
+                copy_with_backup "$doc" "$OPENCODE_DIR/docs/$(basename "$doc")"
+            else
+                copy_if_not_exists "$doc" "$OPENCODE_DIR/docs/$(basename "$doc")" || true
+            fi
+        fi
+    done
+
+    # 6. AGENTS.md (global instructions)
+    echo -e "\n${BLUE}[6/8] AGENTS.md${NC}"
+    if [ -f "$SCRIPT_DIR/.opencode/AGENTS.md" ]; then
+        if [ "$UPGRADE_MODE" = true ]; then
+            copy_with_backup "$SCRIPT_DIR/.opencode/AGENTS.md" "$OPENCODE_DIR/AGENTS.md"
+        else
+            copy_if_not_exists "$SCRIPT_DIR/.opencode/AGENTS.md" "$OPENCODE_DIR/AGENTS.md" || true
+        fi
+    fi
+
+    # 7. Plugin
+    echo -e "\n${BLUE}[7/8] Workflow Plugin${NC}"
+    mkdir -p "$OPENCODE_DIR/plugins"
+    copy_with_backup "$SCRIPT_DIR/.opencode/plugins/workflow-plugin.ts" "$OPENCODE_DIR/plugins/workflow-plugin.ts"
+
+    # Install plugin dependencies
+    if [ -f "$SCRIPT_DIR/.opencode/package.json" ]; then
+        cp "$SCRIPT_DIR/.opencode/package.json" "$OPENCODE_DIR/package.json"
+        if command -v bun &> /dev/null; then
+            (cd "$OPENCODE_DIR" && bun install --silent 2>/dev/null) \
+                && echo -e "  ${GREEN}✓${NC} Dependencies installed" \
+                || echo -e "  ${YELLOW}⚠${NC} bun install failed (run manually: cd ~/.config/opencode && bun install)"
+        else
+            echo -e "  ${YELLOW}⚠${NC} bun not found. Install dependencies manually: cd ~/.config/opencode && npm install"
+        fi
+    fi
+
+    # 8. Update opencode.json (add instructions + mcp)
+    echo -e "\n${BLUE}[8/8] Config (opencode.json)${NC}"
+    python3 -c "
+import json, sys
+from pathlib import Path
+
+config_path = Path.home() / '.config' / 'opencode' / 'opencode.json'
+
+if config_path.exists():
+    with open(config_path) as f:
+        config = json.load(f)
+else:
+    config = {}
+
+changed = False
+
+# Add instructions
+instructions = config.get('instructions', [])
+rule_files = [
+    '~/.config/opencode/rules/security.md',
+    '~/.config/opencode/rules/coding-style.md',
+    '~/.config/opencode/rules/performance.md',
+    '~/.config/opencode/orchestrator-rules.md',
+]
+for rule in rule_files:
+    if rule not in instructions:
+        instructions.append(rule)
+        changed = True
+
+if instructions:
+    config['instructions'] = instructions
+
+# Add plugin path to 'plugin' array (not 'plugins')
+plugin_list = config.get('plugin', [])
+if './plugins/workflow-plugin.ts' not in plugin_list and 'plugins/workflow-plugin.ts' not in plugin_list:
+    plugin_list.append('./plugins/workflow-plugin.ts')
+    changed = True
+if plugin_list:
+    config['plugin'] = plugin_list
+
+# Add MCP servers
+import shutil
+mcp = config.get('mcp', {})
+
+if shutil.which('leann_mcp') and 'leann-server' not in mcp:
+    mcp['leann-server'] = {
+        'type': 'local',
+        'command': ['leann_mcp'],
+        'enabled': True
+    }
+    changed = True
+
+if 'context7' not in mcp:
+    mcp['context7'] = {
+        'type': 'local',
+        'command': ['npx', '-y', '@upstash/context7-mcp'],
+        'enabled': True
+    }
+    changed = True
+
+if 'playwright' not in mcp:
+    mcp['playwright'] = {
+        'type': 'local',
+        'command': ['npx', '-y', '@playwright/mcp@latest'],
+        'enabled': True
+    }
+    changed = True
+
+if mcp:
+    config['mcp'] = mcp
+
+if changed:
+    with open(config_path, 'w') as f:
+        json.dump(config, f, indent=2)
+    print('OK: Config updated')
+else:
+    print('SKIP: Config already up to date')
+" 2>&1 | while read line; do
+        if [[ "$line" == "OK:"* ]]; then
+            echo -e "  ${GREEN}✓${NC} ${line#OK: }"
+        elif [[ "$line" == "SKIP:"* ]]; then
+            echo -e "  ${YELLOW}⊘${NC} ${line#SKIP: }"
+        else
+            echo -e "  ${RED}✗${NC} $line"
+        fi
+    done
+
+    echo
+    echo -e "${GREEN}╔═══════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║  OpenCode installation complete!      ║${NC}"
+    echo -e "${GREEN}╚═══════════════════════════════════════╝${NC}"
+    echo
+    echo -e "Run ${BLUE}opencode${NC} and try ${BLUE}/orchestrate${NC} to start."
+else
+    echo
+    echo -e "${YELLOW}OpenCode not found. Skipping OpenCode installation.${NC}"
+    echo -e "Install OpenCode (https://opencode.ai) and re-run to add OpenCode support."
 fi
