@@ -1,9 +1,9 @@
 ---
-description: Primary orchestrator — manages multi-phase workflows by delegating to specialized subagents
+description: Orchestrator (Codex) — same workflow, runs on OpenAI Codex
 mode: primary
-model: openrouter/minimax/minimax-m2.5
+model: openai/gpt-5.3-codex
 steps: 100
-color: "#F59E0B"
+color: "#3B82F6"
 tools:
   glob: false
   grep: false
