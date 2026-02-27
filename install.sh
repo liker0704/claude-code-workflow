@@ -335,8 +335,8 @@ if command -v opencode &> /dev/null; then
         fi
     fi
 
-    # 7. Plugin + oh-my-opencode
-    echo -e "\n${BLUE}[7/8] Plugins${NC}"
+    # 7. Plugin
+    echo -e "\n${BLUE}[7/8] Workflow Plugin${NC}"
     mkdir -p "$OPENCODE_DIR/plugins"
     copy_with_backup "$SCRIPT_DIR/.opencode/plugins/workflow-plugin.ts" "$OPENCODE_DIR/plugins/workflow-plugin.ts"
 
@@ -349,23 +349,6 @@ if command -v opencode &> /dev/null; then
                 || echo -e "  ${YELLOW}⚠${NC} bun install failed (run manually: cd ~/.config/opencode && bun install)"
         else
             echo -e "  ${YELLOW}⚠${NC} bun not found. Install dependencies manually: cd ~/.config/opencode && npm install"
-        fi
-    fi
-
-    # Install oh-my-opencode
-    if command -v bun &> /dev/null; then
-        echo -e "  ${BLUE}Installing oh-my-opencode...${NC}"
-        (cd "$OPENCODE_DIR" && bunx oh-my-opencode install --no-tui --claude=no --gemini=no --copilot=no 2>/dev/null) \
-            && echo -e "  ${GREEN}✓${NC} oh-my-opencode installed" \
-            || echo -e "  ${YELLOW}⚠${NC} oh-my-opencode install failed (optional, continuing)"
-    fi
-
-    # Copy oh-my-opencode config (.jsonc has priority over .json)
-    if [ -f "$SCRIPT_DIR/.opencode/oh-my-opencode.jsonc" ]; then
-        if [ "$UPGRADE_MODE" = true ]; then
-            copy_with_backup "$SCRIPT_DIR/.opencode/oh-my-opencode.jsonc" "$OPENCODE_DIR/oh-my-opencode.jsonc"
-        else
-            copy_if_not_exists "$SCRIPT_DIR/.opencode/oh-my-opencode.jsonc" "$OPENCODE_DIR/oh-my-opencode.jsonc" || true
         fi
     fi
 
@@ -418,7 +401,21 @@ if shutil.which('leann_mcp') and 'leann-server' not in mcp:
     }
     changed = True
 
-# context7 and playwright are provided by oh-my-opencode built-in
+if 'context7' not in mcp:
+    mcp['context7'] = {
+        'type': 'local',
+        'command': ['npx', '-y', '@upstash/context7-mcp'],
+        'enabled': True
+    }
+    changed = True
+
+if 'playwright' not in mcp:
+    mcp['playwright'] = {
+        'type': 'local',
+        'command': ['npx', '-y', '@playwright/mcp@latest'],
+        'enabled': True
+    }
+    changed = True
 
 if mcp:
     config['mcp'] = mcp
