@@ -5,7 +5,6 @@ model: openai/gpt-5.3-codex
 steps: 100
 color: "#3B82F6"
 tools:
-  glob: false
   grep: false
 ---
 

@@ -5,7 +5,6 @@ model: openrouter/minimax/minimax-m2.5
 steps: 100
 color: "#F59E0B"
 tools:
-  glob: false
   grep: false
 ---
 

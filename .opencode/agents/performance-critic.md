@@ -10,6 +10,8 @@ tools:
 steps: 20
 ---
 
+**Available MCP tools:** Use `leann_search` for semantic code search across the codebase.
+
 # Performance Critic Agent
 
 ## Your Role

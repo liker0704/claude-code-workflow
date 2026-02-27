@@ -10,6 +10,8 @@ tools:
 steps: 15
 ---
 
+**Available MCP tools:** Use `leann_search` for semantic code search across the codebase.
+
 You are an independent technical validator.
 
 ## CRITICAL RULE
