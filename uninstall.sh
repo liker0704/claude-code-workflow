@@ -215,9 +215,18 @@ if [ -d "$OPENCODE_DIR/commands" ] || [ -d "$OPENCODE_DIR/agents" ]; then
     echo -e "\n${BLUE}[5/7] AGENTS.md${NC}"
     remove_if_exists "$OPENCODE_DIR/AGENTS.md"
 
-    # Plugin
-    echo -e "\n${BLUE}[6/7] Plugin${NC}"
+    # Plugin + oh-my-opencode
+    echo -e "\n${BLUE}[6/7] Plugins${NC}"
     remove_if_exists "$OPENCODE_DIR/plugins/workflow-plugin.ts"
+    remove_if_exists "$OPENCODE_DIR/oh-my-opencode.jsonc"
+    remove_if_exists "$OPENCODE_DIR/oh-my-opencode.json"
+
+    # Uninstall oh-my-opencode
+    if command -v bun &> /dev/null; then
+        (cd "$OPENCODE_DIR" && bunx oh-my-opencode uninstall 2>/dev/null) \
+            && echo -e "  ${GREEN}✓${NC} oh-my-opencode removed" \
+            || true
+    fi
 
     # Config cleanup
     echo -e "\n${BLUE}[7/7] Config (opencode.json)${NC}"
@@ -249,7 +258,7 @@ if not config.get('instructions'):
 
 # Remove plugin from 'plugin' array
 plugin_list = config.get('plugin', [])
-new_plugin_list = [p for p in plugin_list if 'workflow-plugin' not in p]
+new_plugin_list = [p for p in plugin_list if 'workflow-plugin' not in p and 'oh-my-opencode' not in p]
 if len(new_plugin_list) != len(plugin_list):
     config['plugin'] = new_plugin_list
     changed = True
@@ -258,7 +267,7 @@ if not config.get('plugin'):
 
 # Remove MCP servers added by workflow
 mcp = config.get('mcp', {})
-for srv in ['leann-server', 'context7', 'playwright']:
+for srv in ['leann-server']:
     if srv in mcp:
         del mcp[srv]
         changed = True
