@@ -11,9 +11,10 @@ You are in **ORCHESTRATOR MODE - ARCHITECTURE PHASE**.
 ## Your Role
 
 You are a **coordinator**:
-- **DO**: Delegate architecture creation to architect agent
-- **DO**: Iterate based on feedback (max 3 iterations)
-- **DO**: Wait for architect agent to complete before reading results
+- **DO**: Delegate discovery to codebase-analyzer and architecture to architect agent
+- **DO**: Run architecture review with 4 critics (convergence loop)
+- **DO**: Iterate based on feedback (until convergence, no fixed limit)
+- **DO**: Wait for agents to complete before reading results
 - **DON'T**: Generate architecture yourself (delegate to architect agent)
 - **DON'T**: Skip human approval
 - **DON'T**: Proceed to Plan without approved architecture
@@ -92,10 +93,81 @@ Status: architecting
 
 architecture:
   iterations: 0
-  max_iterations: 3
+  previous_concerns: []
 ```
 
-## Step 5: Spawn Architect Agent
+## Step 5: L2 Discovery — Spawn Codebase Analyzer
+
+**DO NOT skip this step. Discovery grounds the architecture in existing code.**
+
+Spawn codebase-analyzer to find existing classes, methods, patterns, and interfaces relevant to this task.
+
+```yaml
+Tool: Task
+Parameters:
+  subagent_type: "codebase-analyzer"
+  prompt: |
+    ## DISCOVERY TASK
+
+    Task: {task description}
+    Task slug: {task-slug}
+
+    ## YOUR MISSION
+
+    Find all existing code relevant to this task:
+    1. Classes, functions, interfaces that will be reused or extended
+    2. Existing patterns and conventions in affected modules
+    3. Integration points (imports, exports, APIs) that the new architecture must respect
+    4. Existing tests that cover affected areas
+
+    Focus areas from research:
+    - {files/modules mentioned in research/_summary.md}
+    - {recommended approach area}
+
+    Output file: tmp/.orchestrate/{task-slug}/architecture-discovery.md
+
+    ## OUTPUT FORMAT
+
+    ```markdown
+    # Discovery: {task name}
+
+    ## Existing Classes & Interfaces
+    | Symbol | File:Line | Type | Signature | Notes |
+    |--------|-----------|------|-----------|-------|
+
+    ## Existing Patterns
+    - Pattern: {name} — used in {file:line}
+
+    ## Integration Points
+    - {module} exports: {list}
+    - {module} expects: {list}
+
+    ## Existing Tests
+    - {test file}: covers {what}
+
+    ## Reuse Candidates
+    | Symbol | File | Can Reuse As-Is | Needs Modification |
+    |--------|------|-----------------|-------------------|
+    ```
+
+  description: "L2 Discovery: analyze existing code for {task-slug}"
+```
+
+### Wait for Discovery Agent
+
+```
+TaskOutput(discovery-task-id, block=true) → wait until complete
+```
+
+### Validate Discovery Output
+
+1. Read `architecture-discovery.md`
+2. Check it has at least `## Existing Classes & Interfaces` or `## Existing Patterns`
+3. If empty/failed: Log warning, proceed without discovery (architect will work from research only)
+
+Store discovery results for passing to architect in Step 6.
+
+## Step 6: Spawn Architect Agent
 
 **DO NOT generate architecture yourself. Delegate to architect agent.**
 
@@ -119,6 +191,16 @@ Parameters:
 
     Recommended approach from research: {approach}
 
+    ## DISCOVERY RESULTS (L2)
+
+    {Content of architecture-discovery.md, or "No discovery data available — work from research only"}
+
+    Key existing code:
+    - {class/interface 1 with file:line}
+    - {class/interface 2 with file:line}
+
+    Reuse candidates: {from discovery Reuse Candidates table}
+
     ## YOUR MISSION
 
     Create architecture decision document for this task.
@@ -137,6 +219,8 @@ Parameters:
        - Medium: Single source or some uncertainty
        - Low: Limited research, needs validation
 
+    4. Define concrete interfaces for ALL new public APIs (L3 Specification)
+
     ## OUTPUT FORMAT
 
     Write to: tmp/.orchestrate/{task-slug}/architecture.md
@@ -154,6 +238,27 @@ Parameters:
     {2-3 sentences from research findings: what we're doing and why}
 
     **Research basis:** "{quote from research}" (source: research/_summary.md)
+
+    ## System Diagram
+
+    ```mermaid
+    {Component diagram showing how pieces fit together}
+    {Show data flow between components}
+    {Label connections with interface names}
+    ```
+
+    Brief explanation of the diagram.
+
+    ## Existing Code Analysis
+
+    Based on L2 discovery:
+
+    | Symbol | File | Reuse Strategy |
+    |--------|------|---------------|
+    | {class/function} | `{path:line}` | REUSE as-is / EXTEND / WRAP / REPLACE |
+
+    Key integration constraints:
+    - {constraint from existing code}
 
     ## Alternatives Considered
 
@@ -178,11 +283,33 @@ Parameters:
     |--------|------|---------|
     | CREATE | `src/path/to/new.ts` | {What it does} |
     | MODIFY | `src/path/to/existing.ts` | {What changes} |
+    | REUSE  | `src/path/to/existing.ts` | {Used as-is, no changes needed} |
+
+    ## Interfaces
+
+    ### {Component/Module Name}
+
+    ```{language}
+    // Concrete signature — implementer MUST follow exactly
+    class ClassName:
+        def method_name(self, param: ParamType) -> ReturnType: ...
+    ```
+
+    **Invariants:**
+    - {invariant 1: e.g., "returns empty list, never null"}
+    - {invariant 2}
+
+    **Error cases:**
+    - {error case 1}: {expected behavior}
+    - {error case 2}: {expected behavior}
+
+    ---
+    *Repeat ### block for each public interface*
 
     ## Data Flow
 
     ```
-    {Input} → {Component A} → {Component B} → {Output}
+    {Input} → {Component A}.method() → {Component B}.process() → {Output}
     ```
 
     ---
@@ -196,8 +323,13 @@ Parameters:
     - [ ] Research findings are quoted, not paraphrased
     - [ ] At least 2 alternatives considered
     - [ ] Decision has clear rationale with confidence
-    - [ ] Components table lists all files
-    - [ ] Data flow shows architecture
+    - [ ] System Diagram present (mermaid or ASCII)
+    - [ ] Existing Code Analysis references discovery results
+    - [ ] Components table lists all files (CREATE, MODIFY, or REUSE)
+    - [ ] Interfaces section has concrete signatures for ALL new public APIs
+    - [ ] Each interface has invariants and error cases
+    - [ ] Components uses REUSE where discovery found reusable code
+    - [ ] Data flow shows architecture with interface references
 
   description: "Architect: design for {task-slug}"
 ```
@@ -208,21 +340,24 @@ Parameters:
 TaskOutput(architect-task-id, block=true) → wait until complete
 ```
 
-### Validate Architecture Output
+## Step 7: Validate Architecture Output
 
 After architect agent completes:
 
 1. Read `architecture.md`
 2. Validate required sections exist:
    - `## Context` (non-empty, has research quote)
+   - `## System Diagram` (non-empty, has mermaid or ASCII block)
+   - `## Existing Code Analysis` (non-empty if discovery succeeded; skip check if discovery failed)
    - `## Alternatives Considered` (at least 1)
    - `## Decision` (has Approach, Rationale, Confidence)
-   - `## Components` (has at least 1 row)
+   - `## Components` (has at least 1 row; REUSE action allowed)
+   - `## Interfaces` (at least 1 interface with signature, invariants, error cases)
    - `## Data Flow` (non-empty)
 
 3. If validation fails:
 ```
-⚠️ Architecture validation failed
+Warning: Architecture validation failed
 
 Missing: {what's missing}
 
@@ -232,7 +367,118 @@ Options:
 3. [Skip] Proceed without full architecture
 ```
 
-## Step 6: Present for Review
+## Step 7.5: Architecture Review (4 Critics)
+
+**Before presenting to user, run architecture through ALL 4 critics with convergence loop.**
+
+### 7.5.1: Spawn 4 Critics (PARALLEL)
+
+```yaml
+Tool: Task (x4 in parallel)
+Parameters:
+  - subagent_type: "devil-advocate"
+    prompt: |
+      Review architecture: tmp/.orchestrate/{task-slug}/architecture.md
+      Context: {task description}
+      Focus: architectural risks, wrong abstractions, missing components, over-engineering, interface gaps.
+      Read research/_summary.md BEFORE critiquing.
+      Output: tmp/.orchestrate/{task-slug}/arch-review-devil-advocate.md
+    description: "Architecture review: devil's advocate"
+
+  - subagent_type: "security-critic"
+    prompt: |
+      Review architecture: tmp/.orchestrate/{task-slug}/architecture.md
+      Focus: security implications of architectural decisions, trust boundaries, auth model, interface attack surface.
+      Output: tmp/.orchestrate/{task-slug}/arch-review-security.md
+    description: "Architecture review: security"
+
+  - subagent_type: "performance-critic"
+    prompt: |
+      Review architecture: tmp/.orchestrate/{task-slug}/architecture.md
+      Focus: performance implications of component design, data flow bottlenecks, scaling concerns, interface efficiency.
+      Output: tmp/.orchestrate/{task-slug}/arch-review-performance.md
+    description: "Architecture review: performance"
+
+  - subagent_type: "second-opinion"
+    prompt: |
+      Validate architecture: tmp/.orchestrate/{task-slug}/architecture.md
+      MAY read research/_summary.md for fact verification.
+      Judge: Are interfaces correct? Are alternatives properly rejected? Is the design sound?
+      Output: tmp/.orchestrate/{task-slug}/arch-review-second-opinion.md
+    description: "Architecture review: second opinion"
+```
+
+Wait for ALL 4 critics to complete.
+
+### 7.5.2: Convergence Loop
+
+Initialize: `previous_block_concerns = []`
+
+#### LOOP:
+
+**Collect verdicts** from all 4 critic outputs.
+
+**IF all verdicts in {APPROVE, APPROVE_WITH_NOTES, RECOMMEND_CHANGES}:**
+- Architecture passes critic review
+- Collect RECOMMEND_CHANGES notes for inclusion in user presentation (Step 8)
+- BREAK — proceed to Step 8
+
+**IF any verdict = BLOCK:**
+
+Extract `current_block_concerns` (list of concern summaries from all BLOCK verdicts).
+
+Compare with `previous_block_concerns`:
+
+- **IF `current_block_concerns` matches `previous_block_concerns`** (same concerns repeated):
+  - STUCK detected. Escalate to user:
+    ```
+    Architecture review STUCK — same concerns persist after revision.
+
+    Unresolved concerns:
+    {list of stuck concerns with critic name and details}
+
+    [Override] Accept architecture despite concerns
+    [Manual] Provide specific guidance for revision
+    [Abort] Cancel architecture phase
+    ```
+
+- **IF different** (progress made):
+  - Set `previous_block_concerns = current_block_concerns`
+  - Spawn architect to revise architecture addressing ONLY BLOCK concerns:
+    ```yaml
+    Tool: Task
+    Parameters:
+      subagent_type: "architect"
+      prompt: |
+        Revise architecture to address these BLOCK concerns: {blocked_concerns}.
+        Architecture: tmp/.orchestrate/{task-slug}/architecture.md
+        Discovery: tmp/.orchestrate/{task-slug}/architecture-discovery.md
+        Keep all approved aspects unchanged.
+        Maintain all Interfaces section signatures unless concern specifically targets them.
+        For each concern, explain how it's resolved in a ## Revision Notes section.
+      description: "Revise architecture for BLOCK concerns"
+    ```
+  - Re-run ONLY the critics that issued BLOCK (save tokens)
+  - Continue loop
+
+### 7.5.3: Present Review Results
+
+```
+## Architecture Critic Review Complete
+
+| Critic | Verdict | Key Concern |
+|--------|---------|-------------|
+| Devil's Advocate | {verdict} | {top concern or "None"} |
+| Security | {verdict} | {top concern or "None"} |
+| Performance | {verdict} | {top concern or "None"} |
+| Second Opinion | {verdict} | {top concern or "None"} |
+
+{If RECOMMEND_CHANGES concerns exist:}
+### Concerns Noted (non-blocking)
+{list of RECOMMEND_CHANGES concerns}
+```
+
+## Step 8: Present for Review
 
 Update `task.md` Status to `arch-review`.
 
@@ -242,13 +488,18 @@ Architecture Review Required
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Task: {task-slug}
-Iteration: {N}/3
+Iteration: {N}
 
 Summary:
   Approach: {approach from Decision section}
   New files: {count CREATE}
   Modified files: {count MODIFY}
+  Reused files: {count REUSE}
+  Interfaces defined: {count}
   Trade-off: {main trade-off}
+
+Critic Review: {PASSED / PASSED_WITH_NOTES}
+{If notes: list RECOMMEND_CHANGES concerns}
 
 Alternatives rejected:
   - {Alternative A}: {reason}
@@ -266,7 +517,7 @@ Full document: tmp/.orchestrate/{task-slug}/architecture.md
 Choice:
 ```
 
-## Step 7: Handle User Decision
+## Step 9: Handle User Decision
 
 ### On Approve [a]
 
@@ -282,15 +533,16 @@ Provide feedback for revision:
 >
 ```
 
-2. Check iteration count:
-   - If iterations < 3: Update to `arch-iteration`, save feedback, go to Step 8
-   - If iterations >= 3: Go to Step 9 (Escalation)
+2. Extract `current_user_concerns` from feedback.
+3. Compare with `previous_concerns` from `task.md`:
+   - If different (progress): Update to `arch-iteration`, save feedback, go to Step 10
+   - If same concerns repeat (stuck): Go to Step 11 (Escalation)
 
-3. Update `task.md`:
+4. Update `task.md`:
 ```yaml
 architecture:
   iterations: {N+1}
-  max_iterations: 3
+  previous_concerns: ["{concern 1}", "{concern 2}"]
   last_feedback: "{user feedback}"
   history:
     - iteration: {N}
@@ -306,7 +558,7 @@ Show full content of `architecture.md`, then return to review prompt.
 ### On Skip [s]
 
 ```
-⚠️ Warning: Proceeding without architecture review.
+Warning: Proceeding without architecture review.
 
 This may lead to:
 - Design issues discovered late
@@ -321,15 +573,30 @@ If confirmed:
 2. Add note: `architecture: skipped`
 3. Show: `Architecture skipped. Run /orchestrate-plan {task-slug}`
 
-## Step 8: Revise Architecture
+## Step 10: Revise Architecture
 
 Read previous feedback from `task.md` architecture.last_feedback.
 
-Regenerate `architecture.md` addressing the feedback specifically.
+Spawn architect agent to revise `architecture.md` addressing the feedback:
+
+```yaml
+Tool: Task
+Parameters:
+  subagent_type: "architect"
+  prompt: |
+    Revise architecture to address this user feedback: {last_feedback}
+    Architecture: tmp/.orchestrate/{task-slug}/architecture.md
+    Discovery: tmp/.orchestrate/{task-slug}/architecture-discovery.md
+    Keep all approved aspects unchanged.
+    For each feedback point, explain how it's resolved.
+  description: "Revise architecture: iteration {N}"
+```
+
+After revision, re-run Step 7.5 (Architecture Review with 4 critics) on the revised architecture.
 
 Show what changed:
 ```
-## Architecture Revised (Iteration {N}/3)
+## Architecture Revised (Iteration {N})
 
 Changes made:
 - {Change 1 addressing feedback}
@@ -338,11 +605,11 @@ Changes made:
 Previous feedback: "{feedback}"
 ```
 
-Return to Step 6 (present for review).
+Return to Step 8 (present for review).
 
-## Step 9: Escalation
+## Step 11: Escalation
 
-When iterations >= 3:
+When same user concerns persist after revision (STUCK detected):
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -350,14 +617,12 @@ Architecture Escalation
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Task: {task-slug}
-Status: Maximum iterations (3) reached
+Status: Same concerns persist after revision — no progress detected.
 
 Rejection history:
-  1. "{feedback 1}"
-  2. "{feedback 2}"
-  3. "{feedback 3}"
+{list all iterations with feedback}
 
-The AI cannot satisfy requirements within iteration limit.
+The revision loop is not converging on a solution.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -371,13 +636,13 @@ Choice:
 ### On Manual [m]
 
 1. Prompt for detailed requirements
-2. Reset iterations to 0
+2. Reset iterations to 0, clear previous_concerns
 3. Update `task.md` Status to `architecting`
-4. Go to Step 5 with manual input
+4. Go to Step 5 (re-run discovery + architect with manual input)
 
 ### On Skip [s]
 
-Same as Step 7 Skip.
+Same as Step 9 Skip.
 
 ### On Abandon [x]
 
@@ -390,16 +655,21 @@ Same as Step 7 Skip.
 |-----------|--------|
 | Research summary missing | Error: Run /orchestrate-research first |
 | Complexity assessment missing | Warn, assume score >= threshold |
-| Generation fails | Retry once, then escalate |
+| Discovery agent fails | Log warning, proceed without discovery |
+| Architect agent fails | Retry once, then escalate |
 | Invalid architecture.md | Show validation errors, regenerate |
+| Critic agent fails | Log warning, proceed with remaining critics |
 
 ## Validation
 
 Architecture.md must have:
 - `## Context` section (non-empty)
+- `## System Diagram` (mermaid or ASCII)
+- `## Existing Code Analysis` (if discovery succeeded)
 - `## Alternatives Considered` with at least 1 alternative
 - `## Decision` with Approach and Rationale
-- `## Components` table with at least 1 row
+- `## Components` table with at least 1 row (CREATE, MODIFY, or REUSE)
+- `## Interfaces` with at least 1 interface (signature + invariants + error cases)
 - `## Data Flow` section
 
 ---

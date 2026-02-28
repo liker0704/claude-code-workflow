@@ -55,11 +55,21 @@ max_parallel_tasks: 3
 ### Pipeline (ENFORCED)
 
 ```
-implementer (self-test) → TEST GATE (/verify) → tester → REVIEW GATE → complete
-                               ↓ FAIL
-                          auto-debug cycle (max 3)
-                               ↓ STILL FAIL
-                          BLOCKED → escalate
+FOR EACH TASK:
+
+  [tdd: full]
+    tester-first (write tests) → implementer (STRICT) → TEST GATE → tester → REVIEW GATE → complete
+                                                             ↓ FAIL
+                                                        auto-debug (max 3)
+                                                             ↓ STILL FAIL
+                                                        BLOCKED → escalate
+
+  [tdd: skip]
+    implementer (self-test) → TEST GATE (/verify) → tester → REVIEW GATE → complete
+                                   ↓ FAIL
+                              auto-debug cycle (max 3)
+                                   ↓ STILL FAIL
+                              BLOCKED → escalate
 ```
 
 ### Task-Level Review
@@ -74,6 +84,12 @@ Parameters:
     Review task-{XX}: tmp/.orchestrate/{task-slug}/execution/task-{XX}-{name}.md
     Checklist: patterns, bugs, error handling, tests, security, architecture alignment
     {IF Arch ref != "none":}Architecture check: Read sections {Arch ref list} from architecture.md — verify alignment.{END IF}
+
+    ## PURPOSEFUL QUESTIONS (answer each explicitly)
+    1. Does this implementation solve the ACTUAL problem, or just the stated requirement?
+    2. What is the simplest thing that could go wrong in production with this change?
+    3. If you had to mass-revert this task's changes, would it be clean or would it break other tasks?
+
     Output to: tmp/.orchestrate/{task-slug}/execution/task-{XX}-review.md
     Verdict: APPROVED | NEEDS_CHANGES | BLOCKED
   description: "Review task-{XX}"
@@ -120,6 +136,11 @@ Parameters:
     - [ ] Code follows project patterns
     - [ ] No security issues introduced
     - [ ] Changes match plan
+
+    ## PURPOSEFUL QUESTIONS (answer each explicitly)
+    1. Does this batch move the project closer to the stated goal, or is it busy work?
+    2. Are there any cross-task interactions in this batch that could cause subtle bugs?
+    3. Would a new developer understand these changes without reading the orchestration context?
 
     ## OUTPUT
 
@@ -318,6 +339,102 @@ Task is ready when: status=pending, all dependencies complete, not blocked
 BEFORE spawning implementer, collect from all dependencies:
 - files_created, exports, interfaces, usage_example
 - arch_ref: from task "Arch ref" field (skip if "none" or architecture.md missing)
+- tdd: from task "TDD" field in tasks.md
+
+### TDD-First Step (for tasks with tdd: full)
+
+**BEFORE spawning implementer**, check task TDD mode from tasks.md.
+
+**IF tdd = "full":**
+
+1. Spawn tester agent in TDD-SPEC mode:
+
+```yaml
+Tool: Task
+Parameters:
+  subagent_type: "tester"
+  prompt: |
+    ## TDD-SPEC MODE: task-{XX}: {name}
+
+    You are writing tests BEFORE implementation exists.
+
+    ## INTERFACES (from architecture.md)
+
+    {Extract ## Interfaces section from architecture.md relevant to this task}
+
+    ## CONTRACT (from tasks.md)
+
+    **PRODUCES:**
+    {PRODUCES table from task definition}
+
+    **EXPECTS:**
+    {EXPECTS from task definition}
+
+    ## YOUR MISSION
+
+    Write REAL, RUNNABLE test files that verify:
+    1. Contract tests: Do the interfaces match their signatures?
+    2. Integration tests: Do the components work together as specified?
+    3. Error case tests: Do error cases from Interfaces section get handled?
+    4. Invariant tests: Are invariants from Interfaces section maintained?
+
+    ## RULES
+
+    - Tests must be runnable (correct imports, correct framework)
+    - Tests WILL FAIL now (implementation doesn't exist yet) — that's expected
+    - Tests must be precise enough that ONLY a correct implementation passes them
+    - Follow project test conventions (detect from existing tests)
+    - DO NOT write trivial tests (no testing that 1+1=2)
+
+    ## EXISTING PATTERNS
+
+    Read existing test files to understand:
+    - Test framework (pytest/jest/vitest/etc)
+    - Directory structure (tests/, __tests__/, *.test.ts, etc)
+    - Naming conventions
+    - Fixture patterns
+
+    ## OUTPUT
+
+    1. Write actual test files to the project
+    2. Write spec report to: tmp/.orchestrate/{task-slug}/execution/task-{XX}-tdd-specs.md
+
+    ```markdown
+    # TDD Specs: task-{XX}
+
+    ## Test Files Created
+    | File | Tests | Covers |
+    |------|-------|--------|
+    | {path} | {count} | {what interfaces/contracts} |
+
+    ## Test Summary
+    - Contract tests: {count}
+    - Integration tests: {count}
+    - Error case tests: {count}
+    - Invariant tests: {count}
+    - Total: {count}
+
+    ## Interfaces Covered
+    | Interface | Signature | Tests |
+    |-----------|-----------|-------|
+    | {name} | {sig} | {test names} |
+
+    ## Run Command
+    {command to run these specific tests}
+    ```
+
+  description: "TDD-SPEC: pre-write tests for task-{XX}"
+```
+
+Wait for tester to complete.
+
+2. Validate TDD specs:
+   - Check that test files were created
+   - Check that spec report exists at `execution/task-{XX}-tdd-specs.md`
+   - If failed: Log warning, fall back to normal (tdd=skip) flow for this task
+
+**IF tdd = "skip":**
+- Skip this section, proceed directly to Implementer Template
 
 ### Implementer Template
 
@@ -343,6 +460,25 @@ Parameters:
     {list section headers from Arch ref field}
     Your implementation MUST align with these architectural decisions.
     {ELSE: omit this entire section}
+
+    {IF task tdd = "full":}
+    ## TDD CONTEXT (STRICT)
+
+    Tests have been pre-written by the tester agent.
+    Read: tmp/.orchestrate/{task-slug}/execution/task-{XX}-tdd-specs.md
+
+    Your implementation MUST:
+    1. Make ALL pre-written tests pass
+    2. NOT modify any test files (they are the specification)
+    3. Follow interface signatures EXACTLY as tested
+    4. Handle ALL error cases that tests verify
+
+    Test files: {list from tdd-specs.md "Test Files Created" table}
+    Run command: {from tdd-specs.md "Run Command"}
+
+    **If a test seems wrong:** Report it in your task report under "## TDD Concerns"
+    but still implement to make it pass. The orchestrator will adjudicate.
+    {END IF}
 
     ## YOU MUST PRODUCE (CONTRACT)
     | Type | Name | Details |
@@ -823,6 +959,9 @@ Parameters:
     - [ ] No commented-out code
     - [ ] Naming is clear and consistent
 
+    ## PURPOSEFUL QUESTION
+    - Is this the simplest solution that works? If not, what's simpler?
+
     ## OUTPUT
 
     Write to: execution/_final-code-quality.md
@@ -904,6 +1043,9 @@ Parameters:
     - [ ] Success criteria met
     - [ ] Edge cases from plan handled
 
+    ## PURPOSEFUL QUESTION
+    - Is there unnecessary complexity beyond what the requirements demand?
+
     ## OUTPUT
 
     Write to: execution/_final-requirements.md
@@ -946,6 +1088,9 @@ Parameters:
     - What's the worst case scenario?
     - Hidden dependencies?
     - Technical debt introduced?
+
+    ## PURPOSEFUL QUESTION
+    - What would a simpler solution look like, and why wasn't it chosen?
 
     ## OUTPUT
 
@@ -1021,6 +1166,87 @@ Verification: Tests ✅ | Types ✅ | Lint ✅ | Build ✅
 ```
 
 **WAIT FOR USER APPROVAL.**
+
+### F6.5: Post-Review Refactoring (OPTIONAL)
+
+After user reviews final results but before completing, offer optional refactoring:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Optional: Post-Review Refactoring
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+All reviews passed. Before final approval, you may optionally
+run a refactoring pass to clean up the implementation.
+
+Refactoring targets:
+- DRY violations (duplicated code across tasks)
+- Dead code removal
+- Naming improvements
+- Simplification of complex logic
+
+[Skip] Proceed to approval (recommended for clean reviews)
+[Refactor] Run refactoring pass
+```
+
+**On Skip:**
+- Proceed directly to F7 (approval)
+
+**On Refactor:**
+
+1. Create git stash point for safety:
+   ```bash
+   git stash push -m "pre-refactor-{task-slug}"
+   ```
+
+2. Spawn implementer in REFACTOR MODE:
+   ```yaml
+   Tool: Task
+   Parameters:
+     subagent_type: "implementer"
+     prompt: |
+       ## REFACTOR MODE: {task-slug}
+
+       All implementation is complete and reviewed.
+       Your job: IMPROVE code quality without changing behavior.
+
+       Read: git diff HEAD~{N}..HEAD (all changes made)
+
+       ## ALLOWED CHANGES
+       - Extract duplicated code into shared functions
+       - Remove dead code / unused imports
+       - Simplify overly complex logic
+       - Improve variable/function naming
+       - Add missing type annotations
+
+       ## FORBIDDEN CHANGES
+       - DO NOT change any behavior or logic
+       - DO NOT add new features
+       - DO NOT modify test files
+       - DO NOT change public interfaces
+
+       ## VERIFICATION
+       After refactoring, run ALL tests and verify PASS.
+
+       ## OUTPUT
+       Write report to: execution/_refactor-report.md
+
+       ### Refactoring Report
+       | Change | File | Before | After | Reason |
+       |--------|------|--------|-------|--------|
+
+       ### Verification: PASS | FAIL
+     description: "Post-review refactoring: {task-slug}"
+   ```
+
+3. Re-run FINAL GATE (F0):
+   - **PASS**: Accept refactoring, proceed to F7
+   - **FAIL**: Revert refactoring and proceed without it:
+     ```bash
+     git stash pop
+     ```
+     Show: "Refactoring reverted (broke FINAL GATE). Proceeding with original code."
+     Proceed to F7
 
 ### F7: On Approval
 

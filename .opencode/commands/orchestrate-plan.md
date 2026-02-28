@@ -324,7 +324,7 @@ Parameters:
 
 For each surviving plan:
 
-Set iteration = 0, max_iterations = 2.
+Initialize: `previous_block_concerns = []`
 
 ### 5.10b.1: Collect Verdicts
 
@@ -333,26 +333,36 @@ Collect all 4 critic verdicts (from Step 5.10 results).
 ### 5.10b.2: Check Convergence
 
 - **IF any critic verdict = BLOCK:**
-  - IF iteration < max_iterations:
-    - Spawn architect to revise plan addressing ONLY the BLOCK concerns:
-      ```yaml
-      Tool: Task
-      Parameters:
-        subagent_type: "architect"
-        prompt: |
-          Revise plan to address these BLOCK concerns: {blocked_concerns}.
-          Plan: tmp/.orchestrate/{task-slug}/plan/plan-{N}.md
-          Tasks: tmp/.orchestrate/{task-slug}/plan/tasks-{N}.md
-          Keep all approved aspects unchanged. For each concern, explain how it's resolved.
-        description: "Revise plan {N} to address BLOCK concerns (iteration {iteration})"
-      ```
-    - Re-run ONLY the critics that issued BLOCK (save tokens)
-    - iteration += 1, go to 5.10b.1
-  - ELSE: Eliminate this plan (set status = NOT_READY, document elimination reasons)
-    ```
-    Plan {N} eliminated after {max_iterations} revision attempts.
-    Unresolved BLOCK concerns: {list}
-    ```
+  - Extract `current_block_concerns` (list of concern summaries from all BLOCK verdicts)
+  - Compare with `previous_block_concerns`:
+    - **IF `current_block_concerns` matches `previous_block_concerns`** (same concerns repeated):
+      - STUCK detected for this plan. Escalate to user:
+        ```
+        Plan {N} review STUCK — same BLOCK concerns persist after revision.
+
+        Unresolved concerns:
+        {list of stuck concerns with critic name}
+
+        [Eliminate] Remove this plan from consideration
+        [Override] Accept plan despite unresolved concerns
+        [Manual] Provide specific guidance for revision
+        ```
+    - **IF different** (progress made):
+      - Set `previous_block_concerns = current_block_concerns`
+      - Spawn architect to revise plan addressing ONLY the BLOCK concerns:
+        ```yaml
+        Tool: Task
+        Parameters:
+          subagent_type: "architect"
+          prompt: |
+            Revise plan to address these BLOCK concerns: {blocked_concerns}.
+            Plan: tmp/.orchestrate/{task-slug}/plan/plan-{N}.md
+            Tasks: tmp/.orchestrate/{task-slug}/plan/tasks-{N}.md
+            Keep all approved aspects unchanged. For each concern, explain how it's resolved.
+          description: "Revise plan {N} to address BLOCK concerns"
+        ```
+      - Re-run ONLY the critics that issued BLOCK (save tokens)
+      - Continue loop (go to 5.10b.1)
 
 - **IF all verdicts in {APPROVE, APPROVE_WITH_NOTES, RECOMMEND_CHANGES}:**
   - Plan proceeds to confidence scoring (Step 5.11)
@@ -360,7 +370,7 @@ Collect all 4 critic verdicts (from Step 5.10 results).
 
 **Note:** In multi-plan mode, only BLOCK triggers revision. RECOMMEND_CHANGES is captured in confidence scoring instead.
 
-If zero plans survive after iteration loop, ABORT and report to user.
+If zero plans survive after convergence loop, ABORT and report to user.
 
 ## Step 5.11: Confidence Scoring
 
@@ -587,6 +597,24 @@ Architecture: {../architecture.md (approved) | not required | skipped}
 1. [How to undo]
 ```
 
+## Step 6.5: Clarification Check
+
+**Before presenting the plan, check for ambiguities.**
+
+Review the plan document for:
+1. Any requirements that have multiple valid interpretations
+2. Assumptions that haven't been validated with the user
+3. Open questions from research that affect the plan
+4. Areas where the plan says "TBD" or "to be decided"
+
+**IF unclear requirements or ambiguities exist:**
+- Use AskUserQuestion to resolve them BEFORE presenting the plan
+- Do NOT proceed to Step 7 with unresolved ambiguities
+- Update plan.md with clarified requirements
+
+**IF no ambiguities:**
+- Proceed to Step 7
+
 ## Step 7: Present Plan Direction
 
 ```
@@ -660,6 +688,44 @@ Parallelization: 4 batches, max 3 parallel
 [Proceed] | [Fix Issues]
 ```
 
+## Step 8.7: TDD Mode Assignment
+
+Assign TDD mode to each task based on complexity and architecture availability.
+
+### Assignment Rules
+
+```
+FOR each task:
+  IF complexity_score >= 5
+     AND architecture.md exists and has ## Interfaces section
+     AND task.type IN {implement, modify}:
+    task.tdd = "full"
+  ELSE:
+    task.tdd = "skip"
+```
+
+### Present TDD Assignment
+
+```
+## TDD Mode Assignment
+
+Complexity: {score} (threshold for TDD: 5)
+Architecture interfaces: {yes/no}
+
+| Task | Type | TDD Mode | Reason |
+|------|------|----------|--------|
+| task-01 | implement | full | Complexity >= 5, has interfaces |
+| task-02 | config | skip | Config task, no testable interfaces |
+| task-03 | test | skip | Task IS test |
+
+Tasks with TDD=full: {count}/{total}
+Tester will pre-write tests from architecture interfaces BEFORE implementer runs.
+
+[Continue]
+```
+
+**Note:** TDD=full means the tester agent writes contract + integration tests from architecture.md Interfaces section BEFORE the implementer executes. The implementer MUST make all pre-written tests pass without modifying them (STRICT mode).
+
 ---
 
 ## Step 9: Define Interface Contracts
@@ -725,6 +791,7 @@ Total tasks: {N}
 - **Blocks**: task-02, task-03
 - **Agent**: implementer
 - **Verification**: `pytest tests/test_file.py`
+- **TDD**: full | skip
 - **Status**: pending
 
 **PRODUCES:**
@@ -812,7 +879,7 @@ Parameters:
 
 ## Step 13: Review Iteration Loop
 
-Set iteration = 0, max_iterations = 3.
+Initialize: `previous_block_concerns = []`
 
 ### 13.1: Collect Verdicts
 
@@ -825,28 +892,48 @@ Collect verdicts from devil-advocate and second-opinion:
 
 - **IF all verdicts in {APPROVE, APPROVE_WITH_NOTES}** -> go to Step 14 (plan approved)
 
-- **IF any verdict = BLOCK AND iteration < max_iterations:**
-  - Show BLOCK concerns to user
-  - Spawn architect agent:
-    ```yaml
-    Tool: Task
-    Parameters:
-      subagent_type: "architect"
-      prompt: |
-        Revise this plan to address these specific concerns: {blocked_concerns}.
-        Plan: tmp/.orchestrate/{task-slug}/plan/plan.md
-        Tasks: tmp/.orchestrate/{task-slug}/plan/tasks.md
-        Keep all approved aspects unchanged. For each concern, explain how it's resolved.
-      description: "Revise plan to address BLOCK concerns (iteration {iteration})"
-    ```
-  - Replace plan.md with revised version
-  - Re-run devil-advocate + second-opinion on revised plan (pass previous feedback as context)
-  - iteration += 1, go to 13.1
+- **IF any verdict = BLOCK:**
+  - Extract `current_block_concerns` (list of concern summaries from BLOCK verdicts)
+  - Compare with `previous_block_concerns`:
+    - **IF `current_block_concerns` matches `previous_block_concerns`** (same concerns repeated):
+      - STUCK detected. Escalate to user:
+        ```
+        ## Plan Review STUCK
+
+        Same BLOCK concerns persist after revision — no progress detected.
+
+        Unresolved concerns:
+        {list of stuck concerns with details}
+
+        Options:
+        [Force approve] Accept plan despite unresolved concerns
+        [Manual guidance] Provide specific instructions for revision
+        [Replan from scratch] Return to Step 6
+        [Abort task] Cancel this task
+        ```
+    - **IF different** (progress made):
+      - Set `previous_block_concerns = current_block_concerns`
+      - Show BLOCK concerns to user
+      - Spawn architect agent:
+        ```yaml
+        Tool: Task
+        Parameters:
+          subagent_type: "architect"
+          prompt: |
+            Revise this plan to address these specific concerns: {blocked_concerns}.
+            Plan: tmp/.orchestrate/{task-slug}/plan/plan.md
+            Tasks: tmp/.orchestrate/{task-slug}/plan/tasks.md
+            Keep all approved aspects unchanged. For each concern, explain how it's resolved.
+          description: "Revise plan to address BLOCK concerns"
+        ```
+      - Replace plan.md with revised version
+      - Re-run devil-advocate + second-opinion on revised plan (pass previous feedback as context)
+      - Continue loop (go to 13.1)
 
 - **IF any verdict = RECOMMEND_CHANGES (no BLOCK):**
   - Show concerns to user with options:
     ```
-    ## Review Concerns (iteration {iteration})
+    ## Review Concerns
 
     {list of RECOMMEND_CHANGES concerns}
 
@@ -856,24 +943,8 @@ Collect verdicts from devil-advocate and second-opinion:
     [Replan from scratch] Return to Step 6
     ```
   - [Accept as-is] -> go to Step 14
-  - [Revise and re-review] -> same as BLOCK flow above
+  - [Revise and re-review] -> same as BLOCK flow above (track concerns for stuck detection)
   - [Replan from scratch] -> go to Step 6
-
-### 13.3: Max Iterations Reached
-
-If iteration = max_iterations and unresolved BLOCKs remain:
-
-```
-## Max Review Iterations Reached ({max_iterations})
-
-Unresolved BLOCK concerns:
-{list of unresolved concerns with details}
-
-Options:
-[Force approve] Accept plan despite unresolved concerns
-[Replan from scratch] Return to Step 6
-[Abort task] Cancel this task
-```
 
 ## Step 14: Final Approval
 
