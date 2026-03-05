@@ -346,14 +346,14 @@ Runs automatically on every Write to `tmp/.orchestrate/` files. Validates:
 
 | File | Checks |
 |------|--------|
-| `task.md` | Required headers (Task, Status, Complexity, etc.) |
-| `tasks.md` | Task table with ID/Title/Status columns |
-| `plan.md` | Sections: Overview, Tasks, Dependencies, Risks |
-| `_plan.md` | Research plan: Questions, Scope, Agents |
-| `_summary.md` | Summary: Key Findings, Coverage, Gaps |
-| `architecture.md` | ADR: Context, Decision, Consequences |
-| `risks.md` | Risk table: Risk, Likelihood, Impact, Mitigation |
-| `acceptance.md` | Definition of Done with checklist items |
+| `task.md` | Status + Created + Last-updated fields, Phases section |
+| `tasks.md` | Header (# Tasks or # Task Breakdown) + at least one task-NN |
+| `plan.md` | Status field (draft/approved/superseded) |
+| `_plan.md` | Status + sections 2,4,7,8 + Complexity Score + Gap iterations |
+| `_summary.md` | Key Findings (>=1) + Recommendations + Sources |
+| `architecture.md` | 8 sections: Context, System Diagram, Existing Code Analysis, Alternatives, Decision, Components, Interfaces, Data Flow |
+| `risks.md` | Risk table with Risk/Likelihood/Impact/Mitigation columns |
+| `acceptance.md` | Definition of Done header + checklist items |
 
 **Secrets detection** — scans ALL orchestrate files for:
 - API keys (`sk-...`)
