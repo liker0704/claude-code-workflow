@@ -163,6 +163,18 @@ ERROR_HINTS = {
         "Decision section missing 'Rationale:'",
         "Add '**Rationale:** why this approach was chosen' to Decision section"
     ),
+    "missing_system_diagram": (
+        "Missing required section: ## System Diagram",
+        "Add '## System Diagram' section with mermaid or ASCII component diagram"
+    ),
+    "missing_existing_code_analysis": (
+        "Missing required section: ## Existing Code Analysis",
+        "Add '## Existing Code Analysis' table: Symbol | File | Reuse Strategy (REUSE/EXTEND/WRAP/REPLACE)"
+    ),
+    "missing_interfaces": (
+        "Missing required section: ## Interfaces",
+        "Add '## Interfaces' section with at least 1 interface: signature, invariants, error cases"
+    ),
 
     # risks.md
     "missing_risk_table": (
@@ -442,12 +454,15 @@ def validate_architecture_md(content: str) -> tuple[bool, list[str]]:
     errors = []
     warnings = []
 
-    # Required sections for lightweight ADR
+    # Required sections for ADR
     section_map = {
         "## Context": "missing_context",
+        "## System Diagram": "missing_system_diagram",
+        "## Existing Code Analysis": "missing_existing_code_analysis",
         "## Alternatives Considered": "missing_alternatives",
         "## Decision": "missing_decision",
         "## Components": "missing_components",
+        "## Interfaces": "missing_interfaces",
         "## Data Flow": "missing_data_flow",
     }
 
@@ -490,7 +505,7 @@ def validate_architecture_md(content: str) -> tuple[bool, list[str]]:
     if components_match:
         components_section = components_match.group(1)
         component_rows = re.findall(
-            r'\|\s*(CREATE|MODIFY|DELETE)\s*\|',
+            r'\|\s*(CREATE|MODIFY|DELETE|REUSE)\s*\|',
             components_section,
             re.IGNORECASE
         )

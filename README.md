@@ -151,7 +151,18 @@ Scout (quick recon) → Research Plan → User Approval → Parallel Agents → 
 
 Triggered automatically for complex tasks (complexity >= 5).
 
-- Architect agent creates `architecture.md` in ADR (Architecture Decision Record) format
+```
+L2 Discovery (codebase-analyzer) → Architect (3-level top-down) → Validate → 4-Critic Review → User Approval
+```
+
+**Architecture process:**
+- **L2 Discovery** — `codebase-analyzer` finds existing classes, methods, patterns, integration points
+- **3-level top-down design:**
+  - L1: System Diagram (mermaid/ASCII component overview)
+  - L2: Existing Code Analysis (reuse strategies: REUSE/EXTEND/WRAP/REPLACE)
+  - L3: Interfaces (concrete signatures, invariants, error cases)
+- **Output:** `architecture.md` in ADR format with 8 sections: Context, System Diagram, Existing Code Analysis, Alternatives, Decision, Components, Interfaces, Data Flow
+- **4-critic convergence review** — devil-advocate, security-critic, performance-critic, second-opinion review architecture in parallel. Convergence loop with stuck detection (same concerns twice → escalate to user)
 - User reviews and approves architecture before planning begins
 
 ### Phase 2: Plan (`/orchestrate-plan`)
@@ -166,11 +177,13 @@ Architect → Plan + Tasks → Devil's Advocate → Second Opinion → User Appr
 #### Multi-Plan Mode (complexity >= 4)
 
 ```
+Clarification Check (Step 6.5 — resolve ambiguities before planning)
+    ↓
 Strategy Generator (2-3 strategies)
     ↓
 Plan Simulator (per strategy — simulate execution, find gaps)
     ↓
-4-Critic Panel (per strategy):
+4-Critic Panel (per strategy, convergence loop with stuck detection):
   ├── performance-critic — latency, memory, scalability analysis
   ├── security-critic — threat modeling, attack surface review
   ├── devil-advocate — structural weaknesses, hidden assumptions
@@ -178,6 +191,8 @@ Plan Simulator (per strategy — simulate execution, find gaps)
     ↓
 Confidence Scoring:
   score = 0.35×coverage + 0.25×simulation + 0.20×risk + 0.10×complexity + 0.10×clarity
+    ↓
+TDD Mode Assignment (Step 8.7 — full/skip per task based on complexity + interfaces)
     ↓
 Best strategy selected → Full plan generated → User Approval
 ```
@@ -194,11 +209,14 @@ Best strategy selected → Full plan generated → User Approval
 
 Batched execution with multi-layer quality gates.
 
-#### Execution Pipeline (per task)
+#### Execution Pipeline (per task — dual mode)
 
 ```
-Implementer (write code + mandatory self-test)
-    ↓
+[tdd: full]   Tester-first (write tests from Interfaces) → Implementer (STRICT) → TEST GATE → Tester → Review
+[tdd: skip]   Implementer (self-test) → TEST GATE → Auto-debug (max 3) → Tester → Review
+```
+
+```
 TEST GATE (/verify — build, types, lint, tests, secrets, debug statements)
     ↓ FAIL?
 AUTO-DEBUG CYCLE (max 3 iterations):
@@ -206,7 +224,11 @@ AUTO-DEBUG CYCLE (max 3 iterations):
     ↓ still FAIL after 3?
     BLOCKED → escalate to human
     ↓ PASS
+Architecture Scope Check (files modified vs architecture.md Components)
+    ↓
 Tester (structured test report)
+    ↓
+Task-level Review (with 3 purposeful questions)
     ↓
 Next task in batch
 ```
@@ -216,22 +238,30 @@ Next task in batch
 ```
 Batch N (max 3 parallel tasks)
     ↓
-BATCH GATE (reviewer validates all tasks in batch)
+BATCH REVIEW (with 3 purposeful questions: goal alignment, cross-task bugs, readability)
+    ↓
+BATCH GATE (full project verification)
     ↓ APPROVED?
 Batch N+1
     ↓ ... all batches done ...
 FINAL GATE (check acceptance.md Definition of Done)
     ↓
-4-REVIEWER FINAL REVIEW (parallel):
-  ├── Code Quality reviewer
+4-REVIEWER FINAL REVIEW (parallel, each with purposeful question):
+  ├── Code Quality reviewer — "Is this the simplest solution?"
   ├── Security reviewer (OWASP patterns)
-  ├── Requirements reviewer (task-by-task verification)
-  └── Devil's Advocate (find what everyone missed)
+  ├── Requirements reviewer — "Unnecessary complexity?"
+  └── Devil's Advocate — "What would simpler look like?"
+    ↓
+F6.5: Post-Review Refactoring (optional — DRY, dead code, naming)
     ↓
 COMPLETE or FIX → iterate
 ```
 
 **What's new:**
+- **TDD-first mode** — for complex tasks (tdd: full), tester writes tests from architecture Interfaces BEFORE implementer. Implementer runs in STRICT mode: must pass all pre-written tests without modifying them
+- **Architecture scope checking** — after each task, verifies modified files match architecture.md Components table
+- **Purposeful review questions** — targeted questions at task-level (3), batch-level (3), and final review (1 per reviewer) to catch real issues
+- **Post-review refactoring (F6.5)** — optional DRY/cleanup pass after final review with git stash safety net
 - **Implementer self-test** — before reporting success, implementer runs syntax check, import check, and existing tests. Self-fix up to 2 attempts
 - **Test gate** — `/verify` runs 6 automated checks: build, type checking, linting, tests, secrets scanning, debug statement detection
 - **Auto-debug cycle** — on test failure, debugger analyzes root cause, provides structured fix instructions, implementer applies fixes, retests. Max 3 cycles before escalating to human

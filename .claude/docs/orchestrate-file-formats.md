@@ -65,6 +65,7 @@ Description of the task.
 Description of the task.
 
 **Dependencies:** None
+**TDD:** full | skip
 ```
 
 ---
@@ -216,12 +217,15 @@ No gaps found yet.
 ### Required Sections
 
 1. **## Context** — Problem and constraints
-2. **## Alternatives Considered** — Must have at least 1 alternative with rejection reason
-3. **## Decision** — Must include both:
+2. **## System Diagram** — Mermaid or ASCII component diagram showing architecture
+3. **## Existing Code Analysis** — Table: Symbol | File | Reuse Strategy (REUSE/EXTEND/WRAP/REPLACE)
+4. **## Alternatives Considered** — Must have at least 1 alternative with rejection reason
+5. **## Decision** — Must include both:
    - **Approach:** Description of chosen solution
    - **Rationale:** Why this approach was chosen
-4. **## Components** — Table with at least 1 row
-5. **## Data Flow** — Description of data movement
+6. **## Components** — Table with at least 1 row
+7. **## Interfaces** — For each public interface: concrete signature, invariants, error cases
+8. **## Data Flow** — Description of data movement
 
 ### Alternative Format
 
@@ -242,7 +246,7 @@ No gaps found yet.
 | DELETE | `path/to/old.ts` | Why removing |
 ```
 
-- Action must be one of: CREATE, MODIFY, DELETE
+- Action must be one of: CREATE, MODIFY, DELETE, REUSE
 - At least 1 component row required
 
 ### Minimal Valid Example
@@ -253,6 +257,22 @@ No gaps found yet.
 ## Context
 
 We need to solve problem X with constraints Y and Z.
+
+## System Diagram
+
+```mermaid
+graph LR
+    A[Client] --> B[API]
+    B --> C[Processor]
+    C --> D[Database]
+```
+
+## Existing Code Analysis
+
+| Symbol | File | Reuse Strategy |
+|--------|------|----------------|
+| `processData()` | `src/processor.ts:45` | REUSE — fits as-is |
+| `Config` | `src/config.ts:12` | EXTEND — add new fields |
 
 ## Alternatives Considered
 
@@ -271,6 +291,19 @@ We need to solve problem X with constraints Y and Z.
 |--------|------|---------|
 | CREATE | `src/feature.ts` | Implements new feature |
 | MODIFY | `src/config.ts` | Add configuration |
+| REUSE | `src/processor.ts` | Existing processor, no changes needed |
+
+## Interfaces
+
+### `processFeature(input: FeatureInput): Promise<FeatureResult>`
+
+**Invariants:**
+- Input must be validated before calling
+- Returns result within 5s timeout
+
+**Error cases:**
+- `InvalidInputError` — malformed input data
+- `TimeoutError` — processing exceeds timeout
 
 ## Data Flow
 
@@ -308,6 +341,9 @@ We need to solve problem X with constraints Y and Z.
 
 ### architecture.md
 - ❌ Missing required sections
+- ❌ Missing System Diagram (must have mermaid or ASCII block)
+- ❌ Missing Existing Code Analysis section
+- ❌ Missing Interfaces section (need at least 1 interface with signature, invariants, error cases)
 - ❌ No alternatives listed (need at least 1)
 - ❌ Alternative without rejection reason
 - ❌ Missing "rejected:" keyword in alternatives
@@ -338,4 +374,4 @@ When you write any of these files to `tmp/.orchestrate/`, the validator:
 | `plan.md` | Status field (draft/approved/superseded) |
 | `_plan.md` | Status + sections 2,4,7,8 + Complexity Score |
 | `_summary.md` | Key Findings (>=1) + Recommendations + Sources |
-| `architecture.md` | Context + Alternatives (>=1) + Decision (Approach+Rationale) + Components (>=1) + Data Flow |
+| `architecture.md` | Context + System Diagram + Existing Code Analysis + Alternatives (>=1) + Decision (Approach+Rationale) + Components (>=1) + Interfaces (>=1) + Data Flow |
