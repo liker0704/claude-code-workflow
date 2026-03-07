@@ -44,13 +44,41 @@ Check task exists. Handle current status:
 
 Check if LEANN semantic search is available and index exists.
 
-### Check Availability
-1. Try calling `mcp__leann-server__leann_list` MCP tool
-2. If MCP tool not available → set `SEARCH_MODE=keyword`, skip to Step 4
-3. If available → check if an index exists for current project
+LEANN is registered **per-project** (not globally) to save RAM.
 
-### Build Index (auto, if missing)
-If LEANN available but no index for current project — build automatically:
+### Check Availability
+
+#### 1. Try MCP tool
+Call `mcp__leann-server__leann_list` MCP tool.
+- If available + index exists → set `SEARCH_MODE=hybrid`, skip to Step 4
+- If available + no index → go to "Build Index" below
+- If MCP tool not available → go to step 2
+
+#### 2. Check if binary exists
+Run via Bash: `command -v leann_mcp`
+
+**If binary not found:**
+Set `SEARCH_MODE=keyword`, show `LEANN: not installed`, skip to Step 4.
+
+**If binary found but MCP not registered for this project — ask user:**
+```
+LEANN semantic search is installed but not enabled for this project.
+Enable it? (adds ~500MB RAM while running) [y/N]
+```
+
+If user declines → set `SEARCH_MODE=keyword`, skip to Step 4.
+
+If user approves, register per-project via Bash:
+```bash
+claude mcp add -s project leann-server -- leann_mcp
+```
+Then show:
+```
+LEANN: enabled for this project. Restart Claude Code to activate, then re-run /orchestrate-research.
+```
+Set `SEARCH_MODE=keyword` and stop — user needs to restart for MCP to load.
+
+### Build Index (if MCP registered but no index)
 
 ```
 Building LEANN index for semantic search...

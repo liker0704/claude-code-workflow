@@ -41,20 +41,47 @@ If no active tasks, show:
 
 ### LEANN Status Check
 
-After showing tasks (or "No Active Tasks"), check LEANN semantic search status:
+After showing tasks (or "No Active Tasks"), check LEANN semantic search availability.
 
-1. Call `mcp__leann-server__leann_list` MCP tool
-2. Based on result:
+LEANN is registered **per-project** (not globally) to save RAM. Check status in this order:
 
-**If MCP tool not available** (LEANN not installed):
+#### 1. Check if MCP is registered for this project
+Try calling `mcp__leann-server__leann_list` MCP tool.
+
+**If available and index exists:**
+```
+LEANN: ready ({index-name})
+```
+
+**If available but no index** — offer to build (see build steps below).
+
+#### 2. If MCP tool not available — check if leann_mcp binary exists
+Run via Bash: `command -v leann_mcp`
+
+**If binary not found** (LEANN not installed):
 ```
 LEANN: not installed (keyword-only search)
 ```
 
-**If available but no index for current project** — offer to build immediately:
+**If binary found but MCP not registered for this project** — ask user:
+```
+LEANN semantic search is installed but not enabled for this project.
+Enable it? (adds ~500MB RAM while running) [y/N]
+```
+
+If user approves, register per-project via Bash:
+```bash
+claude mcp add -s project leann-server -- leann_mcp
+```
+Then show:
+```
+LEANN: enabled for this project. Restart Claude Code to activate, then re-run /orchestrate.
+```
+Stop here — user needs to restart for MCP to load.
+
+#### 3. Build index (if MCP registered but no index)
 ```
 LEANN: connected, but no index for this project.
-Building index improves code search quality (semantic + keyword).
 Build now? [Y/n]
 ```
 
@@ -75,11 +102,6 @@ CUDA_VISIBLE_DEVICES="" leann build {project-name} --use-ast-chunking --docs $(g
 Then show: `LEANN: index built, ready`
 
 If all three fail → `LEANN: index build failed, keyword-only mode`
-
-**If available and index exists:**
-```
-LEANN: ready ({index-name})
-```
 
 ---
 

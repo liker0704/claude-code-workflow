@@ -185,9 +185,10 @@ echo -e "\n${BLUE}[8/8] LEANN MCP${NC}"
 if [ "$SKIP_LEANN" = true ]; then
     echo -e "  ${YELLOW}⊘${NC} Skipped (--no-leann)"
 else
-    # Check if already registered
-    if claude mcp list 2>/dev/null | grep -q "leann-server"; then
-        echo -e "  ${YELLOW}⊘${NC} Already registered"
+    # Check if already installed
+    if command -v leann_mcp &> /dev/null; then
+        echo -e "  ${YELLOW}⊘${NC} Already installed"
+        echo -e "  ${BLUE}ℹ${NC} LEANN is registered per-project. The orchestrator will offer to enable it when needed."
     else
         # Check if uv is installed
         if ! command -v uv &> /dev/null; then
@@ -205,12 +206,9 @@ else
 
                 # Verify binary is callable
                 if command -v leann_mcp &> /dev/null; then
-                    echo -e "  ${BLUE}Registering MCP server...${NC}"
-                    if claude mcp add --scope user leann-server -- leann_mcp 2>/dev/null; then
-                        echo -e "  ${GREEN}✓${NC} LEANN MCP server registered"
-                    else
-                        echo -e "  ${YELLOW}⚠${NC} Failed to register MCP server (you can do it manually later)"
-                    fi
+                    echo -e "  ${GREEN}✓${NC} leann_mcp available on PATH"
+                    echo -e "  ${BLUE}ℹ${NC} LEANN is registered per-project (saves RAM). The orchestrator will offer to enable it when needed."
+                    echo -e "  ${BLUE}ℹ${NC} Manual setup: cd ~/projects/your-project && claude mcp add -s project leann-server -- leann_mcp"
                 else
                     echo -e "  ${YELLOW}⚠${NC} leann_mcp not on PATH. Add ~/.local/bin to PATH and re-run install"
                 fi
@@ -393,13 +391,8 @@ if plugin_list:
 import shutil
 mcp = config.get('mcp', {})
 
-if shutil.which('leann_mcp') and 'leann-server' not in mcp:
-    mcp['leann-server'] = {
-        'type': 'local',
-        'command': ['leann_mcp'],
-        'enabled': True
-    }
-    changed = True
+# LEANN is registered per-project (not globally) to save RAM.
+# The orchestrator will offer to enable it when needed.
 
 if 'context7' not in mcp:
     mcp['context7'] = {
